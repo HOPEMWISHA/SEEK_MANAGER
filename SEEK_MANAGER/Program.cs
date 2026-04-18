@@ -29,7 +29,6 @@ namespace SEEK_MANAGER
                     return; // user cancelled or failed to login
                 }
             }
-
             Application.Run(new MainDashboard());
         }
     }
