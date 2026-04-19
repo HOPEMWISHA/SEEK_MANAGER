@@ -29,6 +29,16 @@ namespace SEEK_MANAGER
                     return; // user cancelled or failed to login
                 }
             }
+
+            // Run quick diagnostics and show results to the user (helps verify handlers, tables, logo)
+            try
+            {
+                var diag = Diagnostics.RunChecks();
+                var msg = string.Join("\n", diag);
+                MessageBox.Show(msg, "Diagnostics rapides", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch { }
+
             Application.Run(new MainDashboard());
         }
     }

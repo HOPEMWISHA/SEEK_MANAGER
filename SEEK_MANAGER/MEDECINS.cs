@@ -68,17 +68,8 @@ namespace SEEK_MANAGER
             {
                 try
                 {
-                    var items = new System.Collections.Generic.List<string>();
-                    foreach (DataGridViewRow row in guna2DataGridView1.Rows)
-                    {
-                        if (row.IsNewRow) continue;
-                        var cells = new System.Collections.Generic.List<string>();
-                        foreach (DataGridViewCell c in row.Cells)
-                            cells.Add(c.Value?.ToString() ?? string.Empty);
-                        items.Add(string.Join(" | ", cells));
-                    }
-                    var lf = new ListForm(items, "Liste - Medecins");
-                    lf.ShowDialog(this);
+                    using var f = new EtatSortieForm(hm, summary: true);
+                    f.ShowDialog(this);
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message); }
             };

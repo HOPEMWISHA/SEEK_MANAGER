@@ -64,36 +64,59 @@ namespace SEEK_MANAGER
             btnDark.Click += ToggleDarkMode;
             header.Controls.Add(btnDark);
 
-            /* show connected user and logout
-            var lblUser = new Label { Name = "lblUser", Text = UserSession.Username ?? string.Empty, Dock = DockStyle.Left, AutoSize = true, ForeColor = Color.FromArgb(33,37,41), Font = new Font("Segoe UI", 9F, FontStyle.Regular) };
+            // show connected user and logout
+            var lblUser = new Label
+            {
+                Name = "lblUser",
+                Text = UserSession.Username ?? string.Empty,
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                ForeColor = Color.FromArgb(33, 37, 41),
+                Font = new Font("Segoe UI", 9F, FontStyle.Regular)
+            };
             header.Controls.Add(lblUser);
 
-            var btnLogout = new Button { Text = "Déconnexion", Dock = DockStyle.Right, Width = 120, BackColor = Color.FromArgb(231,76,60), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-            btnLogout.FlatAppearance.BorderSize = 0;
-            btnLogout.Click += (s, e) => 
+            var btnLogout = new Button
             {
-                // clear session and show login form
+                Name = "btnLogout",
+                Text = "Déconnexion",
+                Dock = DockStyle.Right,
+                Width = 120,
+                BackColor = Color.FromArgb(231, 76, 60),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            btnLogout.FlatAppearance.BorderSize = 0;
+            btnLogout.Click += (s, e) =>
+            {
+                // clear session
                 UserSession.UserId = null;
                 UserSession.Username = null;
                 UserSession.FullName = null;
 
+                // show login again and require success, otherwise exit app
                 using (var lf = new LoginForm())
                 {
                     var dr = lf.ShowDialog(this);
                     if (dr != DialogResult.OK)
                     {
-                        // close app if user cancels login
                         Application.Exit();
                         return;
                     }
                 }
 
-                // update displayed username
-                var lbl = header.Controls["lblUser"] as Label;
-                if (lbl != null) lbl.Text = UserSession.Username ?? string.Empty;
+                // update displayed username after successful re-login
+                try
+                {
+                    var lbl = header.Controls["lblUser"] as Label;
+                    if (lbl != null) lbl.Text = UserSession.Username ?? string.Empty;
+                }
+                catch { }
             };
             header.Controls.Add(btnLogout);
-            */
+
+            // ensure label shows current user (in case Program set it before opening dashboard)
+            try { var lbl = header.Controls["lblUser"] as Label; if (lbl != null) lbl.Text = UserSession.Username ?? string.Empty; } catch { }
             // Main container: cards + details
             // remove extra padding so main image can fill full available width
             mainContainer = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(0) };
@@ -309,9 +332,32 @@ namespace SEEK_MANAGER
         // Ensure all Guna comboboxes/textboxes/buttons inside a control follow the app style and sizes
         private void NormalizeGunaControls(Control root)
         {
+            // determine a target height from textboxes inside this root (recursive)
+            int targetHeight = -1;
+            try
+            {
+                var stack = new System.Collections.Generic.Stack<Control>();
+                stack.Push(root);
+                while (stack.Count > 0)
+                {
+                    var node = stack.Pop();
+                    foreach (Control ch in node.Controls)
+                    {
+                        stack.Push(ch);
+                        if (ch.GetType().FullName == "Guna.UI2.WinForms.Guna2TextBox")
+                        {
+                            try { if (ch.Height > targetHeight) targetHeight = ch.Height; } catch { }
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            if (targetHeight <= 0) targetHeight = 53; // default to common textbox height used in designers
+
             foreach (Control c in root.Controls)
             {
-                // recursively normalize
+                // recursively normalize children first
                 try { NormalizeGunaControls(c); } catch { }
 
                 // Guna2ComboBox -> ensure height matches textboxes and remove radii
@@ -319,11 +365,18 @@ namespace SEEK_MANAGER
                 {
                     dynamic cb = c;
                     try { cb.BorderRadius = 0; } catch { }
-                    try { cb.ItemHeight = 30; } catch { }
-                    try { cb.Size = new System.Drawing.Size(cb.Width, 53); } catch { }
                     try { cb.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDown; } catch { }
                     try { cb.FillColor = Color.White; } catch { }
                     try { cb.ForeColor = Color.FromArgb(33, 37, 41); } catch { }
+                    try
+                    {
+                        // keep width, adjust height to match target textbox height
+                        cb.Size = new System.Drawing.Size(cb.Width, targetHeight);
+                        // item height slightly smaller than control height for padding
+                        var itemH = Math.Max(8, targetHeight - 6);
+                        try { cb.ItemHeight = itemH; } catch { }
+                    }
+                    catch { }
                 }
 
                 // Guna2TextBox -> remove radius
@@ -337,8 +390,22 @@ namespace SEEK_MANAGER
                 if (c.GetType().FullName == "Guna.UI2.WinForms.Guna2Button")
                 {
                     dynamic btn = c;
-                    try { btn.BorderRadius = 0; } catch { }
-                    try { btn.FillColor = primaryColor; } catch { }
+                    try
+                    {
+                        var nm = (c.Name ?? string.Empty).ToString().ToLowerInvariant();
+                        var txt = (Convert.ToString(btn.Text) ?? string.Empty).ToLowerInvariant();
+                        // do not override ETAT buttons (keep their special green style)
+                        if (nm.Contains("etat") || txt.Contains("etat"))
+                        {
+                            try { btn.BorderRadius = 8; } catch { }
+                        }
+                        else
+                        {
+                            try { btn.BorderRadius = 0; } catch { }
+                            try { btn.FillColor = primaryColor; } catch { }
+                        }
+                    }
+                    catch { }
                 }
             }
         }

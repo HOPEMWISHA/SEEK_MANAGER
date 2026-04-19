@@ -44,26 +44,16 @@ namespace SEEK_MANAGER
                 catch { }
             });
 
+            // Open summary version of Etat de sortie (same summary view as HOSPITALISATION uses)
             guna2EtatSortie.Click += (s, e) =>
             {
                 try
                 {
-                    var items = new System.Collections.Generic.List<string>();
-                    foreach (DataGridViewRow row in guna2DataGridView1.Rows)
-                    {
-                        if (row.IsNewRow) continue;
-                        var cells = new System.Collections.Generic.List<string>();
-                        foreach (DataGridViewCell c in row.Cells)
-                            cells.Add(c.Value?.ToString() ?? string.Empty);
-                        items.Add(string.Join(" | ", cells));
-                    }
-                    var lf = new ListForm(items, "Liste - Patients");
-                    lf.ShowDialog(this);
+                    using var f = new EtatSortieForm(hm, summary: true);
+                    f.ShowDialog(this);
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message); }
             };
-            // Preserve designer-defined styles for ETAT_DE_SORTIE and action buttons.
-            // Runtime overrides removed so the controls load with the local designer appearance.
 
             // populate fields when a row is clicked or entered
             guna2DataGridView1.CellClick += (s, e) => SyncFieldsWithSelectedRow();

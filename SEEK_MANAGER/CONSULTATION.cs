@@ -58,14 +58,23 @@ namespace SEEK_MANAGER
                             cells.Add(c.Value?.ToString() ?? string.Empty);
                         items.Add(string.Join(" | ", cells));
                     }
-                    var lf = new ListForm(items, "Liste - Consultations");
-                    lf.ShowDialog(this);
+                    // show summary dialog similar to hospitalisation
+                    using var f = new EtatSortieForm(hm, summary: true);
+                    f.ShowDialog(this);
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message); }
             };
 
-            // Preserve designer-defined styles for the action buttons, ETAT_DE_SORTIE and comboboxes.
-            // Runtime overrides removed so controls keep local designer appearance.
+            // Apply Guna style to ETAT_DE_SORTIE
+            try
+            {
+                guna2EtatSortie.FillColor = System.Drawing.Color.FromArgb(46, 204, 113);
+                guna2EtatSortie.ForeColor = System.Drawing.Color.White;
+                guna2EtatSortie.BorderRadius = 8;
+                guna2EtatSortie.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+                guna2EtatSortie.Size = new System.Drawing.Size(288, 68);
+            }
+            catch { }
             // refresh button removed
         }
 

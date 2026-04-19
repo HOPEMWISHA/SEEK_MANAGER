@@ -48,37 +48,31 @@ namespace SEEK_MANAGER
                 catch { }
             });
 
+            // Open EtatSortieForm which allows filtering by day/week/month/year and printing to PDF
             guna2EtatSortie.Click += (s, e) =>
             {
                 try
                 {
-                    var items = new System.Collections.Generic.List<string>();
-                    foreach (DataGridViewRow row in guna2DataGridView1.Rows)
-                    {
-                        if (row.IsNewRow) continue;
-                        var cells = new System.Collections.Generic.List<string>();
-                        foreach (DataGridViewCell c in row.Cells)
-                            cells.Add(c.Value?.ToString() ?? string.Empty);
-                        items.Add(string.Join(" | ", cells));
-                    }
-                    var lf = new ListForm(items, "Liste - Hospitalisations");
-                    lf.ShowDialog(this);
-
-                    if (guna2DataGridView1.CurrentRow == null) { MessageBox.Show("Sélectionnez une hospitalisation.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information); return; }
-                    if (!int.TryParse(guna2DataGridView1.CurrentRow.Cells[0].Value?.ToString(), out int id)) { MessageBox.Show("Impossible de déterminer l'ID.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
-                    var input = Microsoft.VisualBasic.Interaction.InputBox("Entrez la date de sortie (jj/mm/aaaa):", "Etat de sortie", DateTime.Today.ToShortDateString());
-                    if (DateTime.TryParse(input, out DateTime sortie))
-                    {
-                        if (sortie.Date > DateTime.Today) { MessageBox.Show("La date de sortie ne peut pas être dans le futur.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
-                        hm.SetDateSortie(id, sortie);
-                        RefreshGrid();
-                    }
+                    using var f = new EtatSortieForm(hm);
+                    f.ShowDialog(this);
                 }
-                catch (Exception ex) { MessageBox.Show(ex.Message); }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Erreur ouverture état de sortie : {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             };
 
-            // Preserve designer-defined styles for the action buttons and ETAT_DE_SORTIE.
-            // Runtime overrides removed so controls keep local designer appearance.
+            // Ensure ETAT_DE_SORTIE looks nice (Guna style)
+            try
+            {
+                guna2EtatSortie.FillColor = System.Drawing.Color.FromArgb(46, 204, 113);
+                guna2EtatSortie.ForeColor = System.Drawing.Color.White;
+                guna2EtatSortie.BorderRadius = 8;
+                guna2EtatSortie.Font = new System.Drawing.Font("Segoe UI", 12F, System.Drawing.FontStyle.Bold);
+                guna2EtatSortie.Size = new System.Drawing.Size(288, 68);
+                guna2EtatSortie.TextAlign = HorizontalAlignment.Center;
+            }
+            catch { }
 
             // populate fields when selecting a row
             guna2DataGridView1.CellClick += (s, e) => SyncFieldsWithSelectedRow();

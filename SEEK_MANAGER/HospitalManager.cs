@@ -263,6 +263,49 @@ namespace SEEK_MANAGER
             }
         }
 
+        // Summary: count of sorties grouped by service for a period
+        public DataTable GetEtatSortieSummary(string period, DateTime referenceDate)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string where = "";
+                switch ((period ?? "JOUR").ToUpperInvariant())
+                {
+                    case "JOUR":
+                        where = "DATE(date_sortie) = @refdate";
+                        break;
+                    case "SEMAINE":
+                        where = "YEARWEEK(date_sortie, 1) = YEARWEEK(@refdate, 1)";
+                        break;
+                    case "MOIS":
+                        where = "YEAR(date_sortie) = YEAR(@refdate) AND MONTH(date_sortie) = MONTH(@refdate)";
+                        break;
+                    case "ANNEE":
+                        where = "YEAR(date_sortie) = YEAR(@refdate)";
+                        break;
+                    default:
+                        where = "DATE(date_sortie) = @refdate";
+                        break;
+                }
+
+                string sql = $@"SELECT COALESCE(s.nom_service, 'Non renseigné') AS service_nom,
+                                       COUNT(*) AS sortie_count
+                                FROM hospitalisation h
+                                LEFT JOIN service s ON h.id_service = s.id_service
+                                WHERE {where}
+                                GROUP BY s.nom_service
+                                ORDER BY sortie_count DESC";
+
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@refdate", referenceDate.Date);
+                var da = new MySqlDataAdapter(cmd);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
         // ensure at least 5 default services exist
         public void EnsureDefaultServices()
         {
@@ -681,6 +724,66 @@ namespace SEEK_MANAGER
                 cmd.Parameters.AddWithValue("@sortie", dateSortie);
                 cmd.Parameters.AddWithValue("@id", idHospitalisation);
                 cmd.ExecuteNonQuery();
+            }
+        }
+
+        // Return hospitalisation rows filtered by period relative to a reference date
+        // period: "JOUR", "SEMAINE", "MOIS", "ANNEE"
+        public DataTable GetEtatSortie(string period, DateTime referenceDate)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string where = "";
+                switch ((period ?? "JOUR").ToUpperInvariant())
+                {
+                    case "JOUR":
+                        where = "DATE(date_sortie) = @refdate";
+                        break;
+                    case "SEMAINE":
+                        // week starting Monday
+                        where = "YEARWEEK(date_sortie, 1) = YEARWEEK(@refdate, 1)";
+                        break;
+                    case "MOIS":
+                        where = "YEAR(date_sortie) = YEAR(@refdate) AND MONTH(date_sortie) = MONTH(@refdate)";
+                        break;
+                    case "ANNEE":
+                        where = "YEAR(date_sortie) = YEAR(@refdate)";
+                        break;
+                    default:
+                        where = "DATE(date_sortie) = @refdate";
+                        break;
+                }
+                // If the hospitalisation table does not have id_medecin column, don't join medecin table
+                bool hasMedecin = ColumnExists(con, "hospitalisation", "id_medecin");
+
+                string sql;
+                if (hasMedecin)
+                {
+                    sql = $@"SELECT h.id_hospitalisation, h.chambre, p.nom AS patient_nom, p.prenom AS patient_prenom,
+                                      s.nom_service AS service_nom, m.nom AS medecin_nom, h.date_entree, h.date_sortie
+                               FROM hospitalisation h
+                               LEFT JOIN patient p ON h.id_patient = p.id_patient
+                               LEFT JOIN service s ON h.id_service = s.id_service
+                               LEFT JOIN medecin m ON h.id_medecin = m.id_medecin
+                               WHERE {where} ORDER BY h.date_sortie DESC";
+                }
+                else
+                {
+                    sql = $@"SELECT h.id_hospitalisation, h.chambre, p.nom AS patient_nom, p.prenom AS patient_prenom,
+                                      s.nom_service AS service_nom, h.date_entree, h.date_sortie
+                               FROM hospitalisation h
+                               LEFT JOIN patient p ON h.id_patient = p.id_patient
+                               LEFT JOIN service s ON h.id_service = s.id_service
+                               WHERE {where} ORDER BY h.date_sortie DESC";
+                }
+
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@refdate", referenceDate.Date);
+                var da = new MySqlDataAdapter(cmd);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
             }
         }
     }

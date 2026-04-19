@@ -13,6 +13,7 @@
     <PackageReference Include="MySql.Data" Version="9.6.0" />
     <PackageReference Include="MySqlConnector" Version="2.5.0" />
       <PackageReference Include="BCrypt.Net-Next" Version="4.0.2" />
+    <PackageReference Include="PdfSharpCore" Version="1.3.40" />
   </ItemGroup>
 
   <!-- Ensure assets (images) are copied to output so MainDashboard can load them at runtime -->

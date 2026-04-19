@@ -42,17 +42,8 @@ namespace SEEK_MANAGER
             {
                 try
                 {
-                    var items = new System.Collections.Generic.List<string>();
-                    foreach (DataGridViewRow row in guna2DataGridView1.Rows)
-                    {
-                        if (row.IsNewRow) continue;
-                        var cells = new System.Collections.Generic.List<string>();
-                        foreach (DataGridViewCell c in row.Cells)
-                            cells.Add(c.Value?.ToString() ?? string.Empty);
-                        items.Add(string.Join(" | ", cells));
-                    }
-                    var lf = new ListForm(items, "Liste - Services");
-                    lf.ShowDialog(this);
+                    using var f = new EtatSortieForm(hm, summary: true);
+                    f.ShowDialog(this);
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message); }
             };
@@ -73,11 +64,11 @@ namespace SEEK_MANAGER
             }
             catch { }
 
-            // unify action button colors and remove radii
+            // unify action button colors for add/modify/delete and style ETAT_DE_SORTIE to Guna accent
             try { guna2Button1.FillColor = Color.FromArgb(52, 152, 219); guna2Button1.BorderRadius = 0; } catch { }
             try { guna2Button2.FillColor = Color.FromArgb(52, 152, 219); guna2Button2.BorderRadius = 0; } catch { }
             try { guna2Button3.FillColor = Color.FromArgb(52, 152, 219); guna2Button3.BorderRadius = 0; } catch { }
-            try { guna2EtatSortie.FillColor = Color.FromArgb(52, 152, 219); guna2EtatSortie.BorderRadius = 0; } catch { }
+            try { guna2EtatSortie.FillColor = Color.FromArgb(46, 204, 113); guna2EtatSortie.BorderRadius = 8; guna2EtatSortie.ForeColor = Color.White; guna2EtatSortie.Font = new Font("Segoe UI", 12F, FontStyle.Bold); } catch { }
 
             // populate fields when a row is clicked/entered for quick edit
             guna2DataGridView1.CellClick += (s, e) => SyncFieldsWithSelectedRow();
