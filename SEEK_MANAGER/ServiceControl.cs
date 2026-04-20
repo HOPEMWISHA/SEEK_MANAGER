@@ -42,9 +42,22 @@ namespace SEEK_MANAGER
         private void ServiceControl_Load(object? sender, EventArgs e)
         {
             PopulateMenu();
-            // select first service by default
-            if (leftMenu.Controls.Count > 0 && leftMenu.Controls[0] is Button b)
-                b.PerformClick();
+            // try to select the 'Urgences' service by default, otherwise fall back to first
+            try
+            {
+                Button defaultBtn = null;
+                foreach (Control ch in leftMenu.Controls)
+                {
+                    if (ch is Button btn)
+                    {
+                        if (string.Equals(btn.Text, "Urgences", StringComparison.OrdinalIgnoreCase)) { defaultBtn = btn; break; }
+                        if (defaultBtn == null) defaultBtn = btn;
+                    }
+                }
+
+                if (defaultBtn != null) defaultBtn.PerformClick();
+            }
+            catch { }
         }
 
         private void PopulateMenu()
@@ -59,23 +72,23 @@ namespace SEEK_MANAGER
                     int id = Convert.ToInt32(r["id_service"]);
                     string name = r["nom_service"].ToString();
 
-                    var btn = new Button
-                    {
-                        Text = name,
-                        Tag = id,
-                        Width = leftMenu.ClientSize.Width - 16,
-                        Height = 44,
-                        TextAlign = ContentAlignment.MiddleLeft,
-                        Padding = new Padding(12, 0, 0, 0),
-                        BackColor = Color.White,
-                        FlatStyle = FlatStyle.Flat,
-                        Margin = new Padding(4),
-                        ForeColor = Color.FromArgb(33,37,41),
-                    };
-                    btn.FlatAppearance.BorderSize = 0;
-                    btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(245,245,245);
-                    btn.Click += ServiceButton_Click;
-                    leftMenu.Controls.Add(btn);
+                var btn = new Button
+                {
+                    Text = name,
+                    Tag = id,
+                    Width = leftMenu.ClientSize.Width - 16,
+                    Height = 44,
+                    TextAlign = ContentAlignment.MiddleLeft,
+                    Padding = new Padding(12, 0, 0, 0),
+                    BackColor = Color.White,
+                    FlatStyle = FlatStyle.Flat,
+                    Margin = new Padding(4),
+                    ForeColor = Color.FromArgb(33,37,41),
+                };
+                btn.FlatAppearance.BorderSize = 0;
+                btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(245,245,245);
+                btn.Click += ServiceButton_Click;
+                leftMenu.Controls.Add(btn);
                 }
             }
             catch (Exception ex)

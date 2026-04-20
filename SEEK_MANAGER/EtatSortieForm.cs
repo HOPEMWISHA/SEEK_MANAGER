@@ -55,6 +55,7 @@ namespace SEEK_MANAGER
         private void InitializeComponents()
         {
             Text = "État de sortie - Filtrer et imprimer";
+            if (!string.IsNullOrEmpty(customTitle)) Text = customTitle;
             Size = new Size(1120, 600);
             StartPosition = FormStartPosition.CenterParent;
 
@@ -239,9 +240,70 @@ namespace SEEK_MANAGER
                     try { currentData = FallbackLoader(period, dt)?.Copy(); }
                     catch { currentData = null; }
                 }
-                else if (initialData != null && !forceDb)
+                else if (initialData != null)
                 {
-                    currentData = initialData.Copy();
+                    // Filter the provided initialData according to selected period/date so behavior matches HOSPITALISATION
+                    try
+                    {
+                        var src = initialData.Copy();
+                        var dest = src.Clone();
+
+                        // find a date column to use for filtering (common names)
+                        string dateCol = null;
+                        foreach (var cand in new[] { "date_sortie", "date_consultation", "date_enregistrement", "date_entree", "paid_at" })
+                        {
+                            if (src.Columns.Contains(cand)) { dateCol = cand; break; }
+                        }
+
+                        if (dateCol == null)
+                        {
+                            // no suitable date column — fall back to returning the provided table
+                            currentData = initialData.Copy();
+                        }
+                        else
+                        {
+                            foreach (DataRow r in src.Rows)
+                            {
+                                if (r.Table.Columns.Contains(dateCol) && r[dateCol] != DBNull.Value)
+                                {
+                                    if (DateTime.TryParse(r[dateCol].ToString(), out var ds))
+                                    {
+                                        bool add = false;
+                                        switch ((period ?? "JOUR").ToUpperInvariant())
+                                        {
+                                            case "JOUR":
+                                                add = ds.Date == dt.Date;
+                                                break;
+                                            case "SEMAINE":
+                                                // week starting Monday
+                                                var diff = (int)dt.DayOfWeek - (int)DayOfWeek.Monday;
+                                                if (diff < 0) diff += 7;
+                                                var weekStart = dt.AddDays(-diff).Date;
+                                                var weekEnd = weekStart.AddDays(7).Date;
+                                                add = ds.Date >= weekStart && ds.Date < weekEnd;
+                                                break;
+                                            case "MOIS":
+                                                add = ds.Year == dt.Year && ds.Month == dt.Month;
+                                                break;
+                                            case "ANNEE":
+                                                add = ds.Year == dt.Year;
+                                                break;
+                                            default:
+                                                add = ds.Date == dt.Date;
+                                                break;
+                                        }
+
+                                        if (add) dest.ImportRow(r);
+                                    }
+                                }
+                            }
+                            currentData = dest;
+                        }
+                    }
+                    catch
+                    {
+                        currentData = initialData.Copy();
+                    }
                 }
                 else if (summaryMode)
                 {

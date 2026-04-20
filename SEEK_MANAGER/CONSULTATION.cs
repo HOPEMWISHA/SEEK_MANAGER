@@ -24,6 +24,9 @@ namespace SEEK_MANAGER
             guna2Button2.Click += Guna2Button2_Click;
             guna2Button3.Click += Guna2Button3_Click;
             Load += CONSULTATION_Load;
+            // populate fields when selecting a row
+            guna2DataGridView1.CellClick += (s, e) => SyncFieldsWithSelectedRow();
+            guna2DataGridView1.RowEnter += (s, e) => SyncFieldsWithSelectedRow();
             // wire designer search box + etat
             guna2SearchBox.TextChanged += (s, e) => SearchService.Instance.Publish(guna2SearchBox.Text);
             SearchService.Instance.Subscribe(q =>
@@ -53,8 +56,8 @@ namespace SEEK_MANAGER
                     try { if (guna2DataGridView1.DataSource is DataView dv) dt = dv.ToTable(); else if (guna2DataGridView1.DataSource is DataTable dt2) dt = dt2.Copy(); } catch { dt = null; }
                     if (dt == null) { try { dt = hm.GetConsultationsTable(); } catch { dt = new DataTable(); } }
                     using var f = new EtatSortieForm(hm, dt ?? new DataTable(), "CONSULTATION - État de sortie");
-                    // use hospitalisation-style period filtering for consistency
-                    f.FallbackLoader = (period, refDate) => { try { return hm.GetEtatSortie(period, refDate); } catch { return null; } };
+                    // use consultation-specific loader so the "Afficher" button filters by date_consultation
+                    f.FallbackLoader = (period, refDate) => { try { return hm.GetConsultationsByPeriod(period, refDate); } catch { return null; } };
                     f.ShowDialog(this);
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message); }
@@ -284,6 +287,107 @@ namespace SEEK_MANAGER
             {
                 MessageBox.Show($"Erreur chargement consultation: {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void SyncFieldsWithSelectedRow()
+        {
+            try
+            {
+                var row = guna2DataGridView1.CurrentRow;
+                if (row == null) return;
+
+                // id
+                var id = GetCellValue(row, "id_consultation") ?? GetCellValue(row, 0);
+                guna2TextBox1.Text = id ?? string.Empty;
+
+                // date_consultation
+                var datec = GetCellValue(row, "date_consultation") ?? GetCellValue(row, 1) ?? string.Empty;
+                if (DateTime.TryParse(datec, out var dtc)) guna2TextBox6.Text = dtc.ToShortDateString(); else guna2TextBox6.Text = datec;
+
+                // diagnostic and traitement
+                guna2TextBox7.Text = GetCellValue(row, "diagnostic") ?? GetCellValue(row, 2) ?? string.Empty;
+                guna2TextBox5.Text = GetCellValue(row, "traitement") ?? GetCellValue(row, 3) ?? string.Empty;
+
+                // patient selection: try by id then by name
+                try
+                {
+                    var pidVal = GetCellValue(row, "id_patient");
+                    if (!string.IsNullOrWhiteSpace(pidVal) && int.TryParse(pidVal, out var pid))
+                    {
+                        // set by value
+                        try { guna2ComboBoxPatient.SelectedValue = pid; } catch { }
+                    }
+                    else
+                    {
+                        var pname = GetCellValue(row, "patient_nom") ?? GetCellValue(row, 4) ?? string.Empty;
+                        if (!string.IsNullOrWhiteSpace(pname))
+                        {
+                            for (int i = 0; i < guna2ComboBoxPatient.Items.Count; i++)
+                            {
+                                var drv = guna2ComboBoxPatient.Items[i] as DataRowView;
+                                if (drv == null) continue;
+                                var full = drv.DataView.Table.Columns.Contains("full_name") ? drv["full_name"].ToString() : (drv["nom"]?.ToString() ?? string.Empty);
+                                if (string.Equals(full, pname, StringComparison.OrdinalIgnoreCase)) { guna2ComboBoxPatient.SelectedIndex = i; break; }
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                // medecin selection: similar approach
+                try
+                {
+                    var midVal = GetCellValue(row, "id_medecin");
+                    if (!string.IsNullOrWhiteSpace(midVal) && int.TryParse(midVal, out var mid))
+                    {
+                        try { guna2ComboBoxMedecin.SelectedValue = mid; } catch { }
+                    }
+                    else
+                    {
+                        var mname = GetCellValue(row, "medecin_nom") ?? GetCellValue(row, 5) ?? string.Empty;
+                        if (!string.IsNullOrWhiteSpace(mname))
+                        {
+                            for (int i = 0; i < guna2ComboBoxMedecin.Items.Count; i++)
+                            {
+                                var drv = guna2ComboBoxMedecin.Items[i] as DataRowView;
+                                if (drv == null) continue;
+                                var disp = drv["display"]?.ToString() ?? string.Empty;
+                                if (disp.IndexOf(mname, StringComparison.OrdinalIgnoreCase) >= 0) { guna2ComboBoxMedecin.SelectedIndex = i; break; }
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+            catch { }
+        }
+
+        private string? GetCellValue(DataGridViewRow row, string columnName)
+        {
+            try
+            {
+                if (row.DataGridView != null && row.DataGridView.Columns.Contains(columnName))
+                {
+                    var v = row.Cells[columnName].Value;
+                    return v?.ToString();
+                }
+            }
+            catch { }
+            return null;
+        }
+
+        private string? GetCellValue(DataGridViewRow row, int index)
+        {
+            try
+            {
+                if (index >= 0 && index < row.Cells.Count)
+                {
+                    var v = row.Cells[index].Value;
+                    return v?.ToString();
+                }
+            }
+            catch { }
+            return null;
         }
 
         private void Guna2Button1_Click(object? sender, EventArgs e)

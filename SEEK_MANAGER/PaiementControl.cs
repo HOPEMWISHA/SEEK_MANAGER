@@ -330,6 +330,11 @@ namespace SEEK_MANAGER
             {
                 var id = row.Table.Columns.Contains("id") ? row["id"] : row[0];
                 var patient = row.Table.Columns.Contains("patient_nom") ? row["patient_nom"].ToString() : string.Empty;
+                if (string.IsNullOrWhiteSpace(patient))
+                {
+                    MessageBox.Show("Impossible d'imprimer la facture : le paiement n'est pas lié à un client.", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
                 var reference = row.Table.Columns.Contains("reference") ? row["reference"].ToString() : string.Empty;
                 var amount = row.Table.Columns.Contains("amount") ? Convert.ToDecimal(row["amount"]) : 0m;
                 var currency = row.Table.Columns.Contains("currency") ? row["currency"].ToString() : "";

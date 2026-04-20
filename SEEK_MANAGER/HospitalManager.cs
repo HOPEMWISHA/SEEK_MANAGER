@@ -14,6 +14,98 @@ namespace SEEK_MANAGER
             return MySqlDbManager.Instance.GetConnection();
         }
 
+        // Return consultations filtered by period relative to reference date
+        public DataTable GetConsultationsByPeriod(string period, DateTime referenceDate)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string where = "";
+                switch ((period ?? "JOUR").ToUpperInvariant())
+                {
+                    case "JOUR":
+                        where = "DATE(date_consultation) = @refdate";
+                        break;
+                    case "SEMAINE":
+                        where = "YEARWEEK(date_consultation, 1) = YEARWEEK(@refdate, 1)";
+                        break;
+                    case "MOIS":
+                        where = "YEAR(date_consultation) = YEAR(@refdate) AND MONTH(date_consultation) = MONTH(@refdate)";
+                        break;
+                    case "ANNEE":
+                        where = "YEAR(date_consultation) = YEAR(@refdate)";
+                        break;
+                    default:
+                        where = "DATE(date_consultation) = @refdate";
+                        break;
+                }
+
+                string sql = $@"SELECT c.id_consultation, c.date_consultation, c.diagnostic, c.traitement,
+                                       p.nom AS patient_nom, p.prenom AS patient_prenom,
+                                       m.nom AS medecin_nom
+                                FROM consultation c
+                                LEFT JOIN patient p ON c.id_patient = p.id_patient
+                                LEFT JOIN medecin m ON c.id_medecin = m.id_medecin
+                                WHERE {where} ORDER BY c.date_consultation DESC";
+
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@refdate", referenceDate.Date);
+                var da = new MySqlDataAdapter(cmd);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        // Return patients filtered by registration/creation date column if present
+        public DataTable GetPatientsByRegistrationPeriod(string period, DateTime referenceDate)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                // find a candidate date column
+                string dateCol = null;
+                foreach (var cand in new[] { "date_enregistrement", "created_at", "date_created", "date_inscription" })
+                {
+                    if (ColumnExists(con, "patient", cand)) { dateCol = cand; break; }
+                }
+
+                if (dateCol == null)
+                {
+                    // fallback: return full patients table
+                    return GetPatientsFullTable();
+                }
+
+                string where = "";
+                switch ((period ?? "JOUR").ToUpperInvariant())
+                {
+                    case "JOUR":
+                        where = $"DATE({dateCol}) = @refdate";
+                        break;
+                    case "SEMAINE":
+                        where = $"YEARWEEK({dateCol}, 1) = YEARWEEK(@refdate, 1)";
+                        break;
+                    case "MOIS":
+                        where = $"YEAR({dateCol}) = YEAR(@refdate) AND MONTH({dateCol}) = MONTH(@refdate)";
+                        break;
+                    case "ANNEE":
+                        where = $"YEAR({dateCol}) = YEAR(@refdate)";
+                        break;
+                    default:
+                        where = $"DATE({dateCol}) = @refdate";
+                        break;
+                }
+
+                string sql = $@"SELECT * FROM patient WHERE {where}";
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@refdate", referenceDate.Date);
+                var da = new MySqlDataAdapter(cmd);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
         // Lightweight data access methods for dashboard statistics
         public int GetTotalPatients()
         {
@@ -137,6 +229,16 @@ namespace SEEK_MANAGER
             using (var con = GetConnection())
             {
                 con.Open();
+                // Prevent duplicate full names (case-insensitive)
+                string existsSql = "SELECT COUNT(*) FROM patient WHERE LOWER(nom)=LOWER(@nom) AND LOWER(prenom)=LOWER(@prenom)";
+                var existsCmd = new MySqlCommand(existsSql, con);
+                existsCmd.Parameters.AddWithValue("@nom", nom);
+                existsCmd.Parameters.AddWithValue("@prenom", prenom);
+                var count = Convert.ToInt32(existsCmd.ExecuteScalar());
+                if (count > 0)
+                {
+                    throw new InvalidOperationException("Un patient avec le même nom et prénom existe déjà.");
+                }
 
                 string sql = @"INSERT INTO patient
                                (nom, prenom, sexe, date_naissance, telephone, adresse)
@@ -160,6 +262,17 @@ namespace SEEK_MANAGER
             using (var con = GetConnection())
             {
                 con.Open();
+                // Prevent duplicate full names for other records
+                string existsSql = "SELECT COUNT(*) FROM patient WHERE LOWER(nom)=LOWER(@nom) AND LOWER(prenom)=LOWER(@prenom) AND id_patient<>@id";
+                var existsCmd = new MySqlCommand(existsSql, con);
+                existsCmd.Parameters.AddWithValue("@nom", nom);
+                existsCmd.Parameters.AddWithValue("@prenom", prenom);
+                existsCmd.Parameters.AddWithValue("@id", id);
+                var count = Convert.ToInt32(existsCmd.ExecuteScalar());
+                if (count > 0)
+                {
+                    throw new InvalidOperationException("Un autre patient avec le même nom et prénom existe déjà.");
+                }
 
                 string sql = @"UPDATE patient SET
                                nom=@nom, prenom=@prenom, sexe=@sexe,
@@ -377,6 +490,18 @@ namespace SEEK_MANAGER
             using (var con = GetConnection())
             {
                 con.Open();
+                // validations
+                if (amount <= 0) throw new InvalidOperationException("Le montant doit être supérieur à zéro.");
+                if (paidAt > DateTime.Now) throw new InvalidOperationException("La date de paiement ne peut pas être dans le futur.");
+                if (!string.IsNullOrWhiteSpace(reference))
+                {
+                    string refExists = "SELECT COUNT(*) FROM paiement WHERE reference = @ref";
+                    var rcmd = new MySqlCommand(refExists, con);
+                    rcmd.Parameters.AddWithValue("@ref", reference);
+                    var rcount = Convert.ToInt32(rcmd.ExecuteScalar());
+                    if (rcount > 0) throw new InvalidOperationException("La référence du paiement existe déjà.");
+                }
+
                 string sql = @"INSERT INTO paiement (patient_id, reference, amount, currency, method, paid_at, created_at, notes, is_deleted)
                                VALUES (@pid, @ref, @amt, @cur, @method, @paid, NOW(), @notes, 0)";
                 var cmd = new MySqlCommand(sql, con);
@@ -399,6 +524,19 @@ namespace SEEK_MANAGER
             using (var con = GetConnection())
             {
                 con.Open();
+                // validations
+                if (amount <= 0) throw new InvalidOperationException("Le montant doit être supérieur à zéro.");
+                if (paidAt > DateTime.Now) throw new InvalidOperationException("La date de paiement ne peut pas être dans le futur.");
+                if (!string.IsNullOrWhiteSpace(reference))
+                {
+                    string refExists = "SELECT COUNT(*) FROM paiement WHERE reference = @ref AND id<>@id";
+                    var rcmd = new MySqlCommand(refExists, con);
+                    rcmd.Parameters.AddWithValue("@ref", reference);
+                    rcmd.Parameters.AddWithValue("@id", id);
+                    var rcount = Convert.ToInt32(rcmd.ExecuteScalar());
+                    if (rcount > 0) throw new InvalidOperationException("La référence du paiement existe déjà pour un autre enregistrement.");
+                }
+
                 string sql = @"UPDATE paiement SET patient_id=@pid, reference=@ref, amount=@amt, currency=@cur,
                                      method=@method, paid_at=@paid, notes=@notes, updated_at=NOW()
                                WHERE id=@id";
@@ -698,6 +836,12 @@ namespace SEEK_MANAGER
             using (var con = GetConnection())
             {
                 con.Open();
+
+                // business rule: a patient cannot be admitted and discharged on the same day
+                if (dateSortie.HasValue && dateEntree.Date == dateSortie.Value.Date)
+                {
+                    throw new InvalidOperationException("La date de sortie ne peut pas être la même que la date d'entrée.");
+                }
 
                 bool hasMedecinColumn = ColumnExists(con, "hospitalisation", "id_medecin");
 

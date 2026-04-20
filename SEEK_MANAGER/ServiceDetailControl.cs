@@ -15,6 +15,7 @@ namespace SEEK_MANAGER
         private ComboBox cbPatients;
         private ComboBox cbMedecins;
         private TextBox txtNotes;
+        private Guna2TextBox txtSearch;
         private Button btnAssignHospital;
         private Guna2DataGridView _hospitalisationGrid;
 
@@ -52,9 +53,41 @@ namespace SEEK_MANAGER
             panel.Controls.Add(new Label { Text = "Notes / Détails:", TextAlign = ContentAlignment.MiddleLeft, Dock = DockStyle.Fill }, 0, 2);
             panel.Controls.Add(txtNotes, 1, 2);
 
-            btnAssignHospital = new Button { Text = "Affecter / Hospitaliser", Height = 40, Dock = DockStyle.Top, BackColor = Color.FromArgb(52, 152, 219), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            btnAssignHospital = new Button { Text = "Affecter / Hospitaliser", Height = 40, Dock = DockStyle.Fill, BackColor = Color.FromArgb(52, 152, 219), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             btnAssignHospital.FlatAppearance.BorderSize = 0;
             btnAssignHospital.Click += BtnAssignHospital_Click;
+
+            // Etat sortie button placed beside the assign button (split space)
+            var btnEtatSortie = new Button { Text = "État de sortie", Height = 40, Dock = DockStyle.Fill, BackColor = Color.FromArgb(240, 240, 240), ForeColor = Color.FromArgb(33,37,41), FlatStyle = FlatStyle.Flat };
+            btnEtatSortie.FlatAppearance.BorderSize = 0;
+            btnEtatSortie.Click += (s, e) =>
+            {
+                try
+                {
+                    var table = hm.GetHospitalisationsByService(serviceId);
+                    using var f = new EtatSortieForm(hm, table, $"État de sortie - {lblTitle.Text}");
+                    f.FallbackLoader = (period, refDate) => hm.GetHospitalisationsByService(serviceId);
+                    f.ShowDialog();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Impossible d'ouvrir l'état de sortie: {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+
+            // container to host both buttons side-by-side
+            var btnContainer = new TableLayoutPanel { Dock = DockStyle.Top, Height = 44, ColumnCount = 2 };
+            btnContainer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            btnContainer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            btnContainer.Controls.Add(btnAssignHospital, 0, 0);
+            btnContainer.Controls.Add(btnEtatSortie, 1, 0);
+
+            // local search box — publish queries so it behaves like HOSPITALISATION search
+            txtSearch = new Guna2TextBox { Dock = DockStyle.Top, Height = 36, PlaceholderText = "Rechercher patient...", Margin = new Padding(0, 8, 0, 8) };
+            txtSearch.TextChanged += (s, e) =>
+            {
+                try { SearchService.Instance.Publish(txtSearch.Text); } catch { }
+            };
 
             // data grid to show hospitalisations for this service (Guna2)
             var dgv = new Guna2DataGridView { Dock = DockStyle.Fill, Height = 240 };
@@ -70,8 +103,9 @@ namespace SEEK_MANAGER
             dgv.ThemeStyle.RowsStyle.SelectionBackColor = Color.FromArgb(231, 229, 255);
 
             Controls.Add(dgv);
-            Controls.Add(btnAssignHospital);
+            Controls.Add(btnContainer);
             Controls.Add(panel);
+            Controls.Add(txtSearch);
             Controls.Add(lblTitle);
 
             // store reference for reload
@@ -148,6 +182,13 @@ namespace SEEK_MANAGER
                 {
                     _hospitalisationGrid.DataSource = hosp;
                 }
+
+                // subscribe to global search service so filtering behaves like HOSPITALISATION
+                try
+                {
+                    SearchService.Instance.Subscribe(ApplyGlobalSearch);
+                }
+                catch { }
             }
             catch (Exception ex)
             {
@@ -155,6 +196,33 @@ namespace SEEK_MANAGER
                 if (ex.InnerException != null) msg += " - " + ex.InnerException.Message;
                 MessageBox.Show($"Erreur chargement détail service: {msg}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void ApplyGlobalSearch(string q)
+        {
+            try
+            {
+                if (_hospitalisationGrid == null) return;
+                if (!(_hospitalisationGrid.DataSource is DataView dv)) return;
+                dv.Table.CaseSensitive = false;
+                var safe = (q ?? string.Empty).Trim().Replace("'", "''");
+                if (string.IsNullOrWhiteSpace(safe))
+                {
+                    dv.RowFilter = string.Empty;
+                    return;
+                }
+                dv.RowFilter = $"patient_nom LIKE '{safe}%';";
+            }
+            catch { }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                try { SearchService.Instance.Unsubscribe(ApplyGlobalSearch); } catch { }
+            }
+            base.Dispose(disposing);
         }
 
         private void BtnAssignHospital_Click(object? sender, EventArgs e)
