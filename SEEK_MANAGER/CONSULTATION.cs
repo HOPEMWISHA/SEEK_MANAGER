@@ -53,7 +53,8 @@ namespace SEEK_MANAGER
                     try { if (guna2DataGridView1.DataSource is DataView dv) dt = dv.ToTable(); else if (guna2DataGridView1.DataSource is DataTable dt2) dt = dt2.Copy(); } catch { dt = null; }
                     if (dt == null) { try { dt = hm.GetConsultationsTable(); } catch { dt = new DataTable(); } }
                     using var f = new EtatSortieForm(hm, dt ?? new DataTable(), "CONSULTATION - État de sortie");
-                    f.FallbackLoader = () => { try { return hm.GetConsultationsTable(); } catch { return null; } };
+                    // use hospitalisation-style period filtering for consistency
+                    f.FallbackLoader = (period, refDate) => { try { return hm.GetEtatSortie(period, refDate); } catch { return null; } };
                     f.ShowDialog(this);
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message); }

@@ -56,7 +56,8 @@ namespace SEEK_MANAGER
                     }
 
                     using var f = new EtatSortieForm(hm, dt ?? new DataTable(), "SERVICES - État de sortie");
-                    f.FallbackLoader = () => { try { return hm.GetServicesTable(); } catch { return null; } };
+                    // Use same period-based loader as HOSPITALISATION so user can filter by JOUR/SEMAINE/MOIS/ANNEE
+                    f.FallbackLoader = (period, refDate) => { try { return hm.GetEtatSortie(period, refDate); } catch { return null; } };
                     f.ShowDialog(this);
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message); }

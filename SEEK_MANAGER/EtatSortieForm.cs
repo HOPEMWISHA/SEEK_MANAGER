@@ -28,9 +28,10 @@ namespace SEEK_MANAGER
 
         private DataTable currentData;
         // Optional loader to fetch full table from DB for the calling interface (used when clicking "Afficher")
+        // The loader receives the selected period and reference date and must return a DataTable filtered accordingly.
         [Browsable(false)]
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
-        public Func<DataTable?>? FallbackLoader { get; set; }
+        public Func<string, DateTime, DataTable?>? FallbackLoader { get; set; }
 
         public EtatSortieForm(HospitalManager hospitalManager, bool summary = false)
         {
@@ -235,7 +236,8 @@ namespace SEEK_MANAGER
                 // If forceDb is requested and a fallback loader is provided, prefer it
                 if (forceDb && FallbackLoader != null)
                 {
-                    currentData = FallbackLoader()?.Copy();
+                    try { currentData = FallbackLoader(period, dt)?.Copy(); }
+                    catch { currentData = null; }
                 }
                 else if (initialData != null && !forceDb)
                 {
