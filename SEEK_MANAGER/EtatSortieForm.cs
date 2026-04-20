@@ -86,10 +86,10 @@ namespace SEEK_MANAGER
             btnApply = new Guna2Button { Text = "Afficher", Width = 100, FillColor = Color.FromArgb(52, 152, 219), ForeColor = Color.White, Margin = new Padding(8,4,4,4) };
             btnApply.Click += (s, e) => LoadData();
 
-            btnPrint = new Guna2Button { Text = "Imprimer PDF...", Width = 140, FillColor = Color.FromArgb(155, 89, 182), ForeColor = Color.White, Margin = new Padding(4) };
+            btnPrint = new Guna2Button { Text = "Imprimer PDF...", Width = 100, FillColor = Color.FromArgb(155, 89, 182), ForeColor = Color.White, Margin = new Padding(4) };
             btnPrint.Click += (s, e) => PrintCurrentData();
 
-            btnExport = new Guna2Button { Text = "Exporter PDF", Width = 140, FillColor = Color.FromArgb(46, 204, 113), ForeColor = Color.White, Margin = new Padding(4) };
+            btnExport = new Guna2Button { Text = "Exporter PDF", Width = 100, FillColor = Color.FromArgb(46, 204, 113), ForeColor = Color.White, Margin = new Padding(4) };
             btnExport.Click += (s, e) => ExportPdf();
 
             txtSearch = new Guna2TextBox { PlaceholderText = "Rechercher...", Width = 300, IconLeftSize = new Size(16, 16), Margin = new Padding(12,4,4,4) };

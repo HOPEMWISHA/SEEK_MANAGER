@@ -22,7 +22,7 @@ namespace SEEK_MANAGER
         {
             Dock = DockStyle.Fill;
             main = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(12) };
-            dgv = new Guna2DataGridView { Dock = DockStyle.Top, Height = 360 };
+            dgv = new Guna2DataGridView { Dock = DockStyle.Bottom, Height = 400 };
             btnAdd = new Button { Text = "Ajouter", Width = 120, Height = 40 };
             btnEdit = new Button { Text = "Modifier", Width = 120, Height = 40 };
             btnDelete = new Button { Text = "Supprimer", Width = 120, Height = 40 };
@@ -38,7 +38,7 @@ namespace SEEK_MANAGER
             btnPanel.Controls.Add(btnAdd);
 
             // search box to filter the payments displayed in the grid
-            txtSearch = new Guna2TextBox { Dock = DockStyle.Top, Height = 36, PlaceholderText = "Rechercher (référence, client, méthode, montant)..." };
+            txtSearch = new Guna2TextBox { Dock = DockStyle.Top, Height = 45, PlaceholderText = "Rechercher (référence, client, méthode, montant)..." };
             txtSearch.TextChanged += (s, e) => ApplyFilter();
 
             main.Controls.Add(txtSearch);
