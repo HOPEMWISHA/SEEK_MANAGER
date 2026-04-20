@@ -8,6 +8,7 @@ using PdfSharpCore.Pdf;
 using PdfSharpCore.Drawing;
 using Guna.UI2.WinForms;
 using System.Diagnostics; // Added for Process
+using System.ComponentModel;
 
 namespace SEEK_MANAGER
 {
@@ -15,6 +16,8 @@ namespace SEEK_MANAGER
     {
         private readonly HospitalManager hm;
         private readonly bool summaryMode;
+        private readonly DataTable? initialData;
+        private readonly string? customTitle;
         private Guna2ComboBox cbPeriod;
         private Guna2DateTimePicker dtRef;
         private Guna2Button btnApply;
@@ -24,45 +27,71 @@ namespace SEEK_MANAGER
         private Guna2DataGridView dgv;
 
         private DataTable currentData;
+        // Optional loader to fetch full table from DB for the calling interface (used when clicking "Afficher")
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+        public Func<DataTable?>? FallbackLoader { get; set; }
 
         public EtatSortieForm(HospitalManager hospitalManager, bool summary = false)
         {
             hm = hospitalManager ?? throw new ArgumentNullException(nameof(hospitalManager));
             summaryMode = summary;
+            initialData = null;
+            customTitle = null;
+            InitializeComponents();
+        }
+
+        // Overload: display an existing DataTable (from the calling interface) with a custom title
+        public EtatSortieForm(HospitalManager hospitalManager, DataTable table, string title)
+        {
+            hm = hospitalManager ?? throw new ArgumentNullException(nameof(hospitalManager));
+            summaryMode = false;
+            initialData = table?.Copy();
+            customTitle = title ?? "État de sortie";
             InitializeComponents();
         }
 
         private void InitializeComponents()
         {
             Text = "État de sortie - Filtrer et imprimer";
-            Size = new Size(900, 600);
+            Size = new Size(950, 600);
             StartPosition = FormStartPosition.CenterParent;
 
-            // Toolbar using Guna controls
+            // Toolbar using Guna controls placed in a top FlowLayoutPanel to avoid overlap
+            var toolbar = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                Height = 92,
+                Padding = new Padding(12),
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                AutoSize = false
+            };
+
             cbPeriod = new Guna2ComboBox
             {
-                Location = new Point(12, 12),
                 Width = 120,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 FillColor = Color.White,
                 ForeColor = Color.FromArgb(33, 37, 41),
-                ItemHeight = 30
+                ItemHeight = 30,
+                Margin = new Padding(4)
             };
             cbPeriod.Items.AddRange(new object[] { "JOUR", "SEMAINE", "MOIS", "ANNEE" });
             cbPeriod.SelectedIndex = 0;
 
-            dtRef = new Guna2DateTimePicker { Location = new Point(144, 12), Width = 140, Format = DateTimePickerFormat.Short, FillColor = Color.White };
+            dtRef = new Guna2DateTimePicker { Width = 140, Format = DateTimePickerFormat.Short, FillColor = Color.White, Margin = new Padding(4) };
 
-            btnApply = new Guna2Button { Text = "Afficher", Location = new Point(300, 12), Width = 100, FillColor = Color.FromArgb(52, 152, 219), ForeColor = Color.White };
+            btnApply = new Guna2Button { Text = "Afficher", Width = 100, FillColor = Color.FromArgb(52, 152, 219), ForeColor = Color.White, Margin = new Padding(8,4,4,4) };
             btnApply.Click += (s, e) => LoadData();
 
-            btnPrint = new Guna2Button { Text = "Imprimer PDF...", Location = new Point(412, 12), Width = 140, FillColor = Color.FromArgb(155, 89, 182), ForeColor = Color.White };
+            btnPrint = new Guna2Button { Text = "Imprimer PDF...", Width = 140, FillColor = Color.FromArgb(155, 89, 182), ForeColor = Color.White, Margin = new Padding(4) };
             btnPrint.Click += (s, e) => PrintCurrentData();
 
-            btnExport = new Guna2Button { Text = "Exporter PDF", Location = new Point(568, 12), Width = 140, FillColor = Color.FromArgb(46, 204, 113), ForeColor = Color.White };
+            btnExport = new Guna2Button { Text = "Exporter PDF", Width = 140, FillColor = Color.FromArgb(46, 204, 113), ForeColor = Color.White, Margin = new Padding(4) };
             btnExport.Click += (s, e) => ExportPdf();
 
-            txtSearch = new Guna2TextBox { PlaceholderText = "Rechercher...", Location = new Point(12, 56), Width = 420, IconLeftSize = new Size(16, 16) };
+            txtSearch = new Guna2TextBox { PlaceholderText = "Rechercher...", Width = 300, IconLeftSize = new Size(16, 16), Margin = new Padding(12,4,4,4) };
             txtSearch.TextChanged += (s, e) =>
             {
                 try
@@ -85,7 +114,14 @@ namespace SEEK_MANAGER
                 catch { }
             };
 
-            dgv = new Guna2DataGridView { Location = new Point(12, 96), Size = new Size(860, 480), ReadOnly = true, AllowUserToAddRows = false, AllowUserToDeleteRows = false };
+            toolbar.Controls.Add(cbPeriod);
+            toolbar.Controls.Add(dtRef);
+            toolbar.Controls.Add(btnApply);
+            toolbar.Controls.Add(btnPrint);
+            toolbar.Controls.Add(btnExport);
+            toolbar.Controls.Add(txtSearch);
+
+            dgv = new Guna2DataGridView { Dock = DockStyle.Fill, ReadOnly = true, AllowUserToAddRows = false, AllowUserToDeleteRows = false };
             dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             dgv.EnableHeadersVisualStyles = false;
             dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240);
@@ -95,13 +131,8 @@ namespace SEEK_MANAGER
             dgv.GridColor = Color.FromArgb(230, 230, 230);
             dgv.BorderStyle = BorderStyle.None;
 
-            Controls.Add(cbPeriod);
-            Controls.Add(dtRef);
-            Controls.Add(btnApply);
-            Controls.Add(btnPrint);
-            Controls.Add(btnExport);
-            Controls.Add(txtSearch);
             Controls.Add(dgv);
+            Controls.Add(toolbar);
 
             // load initial data
             LoadData();
@@ -195,13 +226,22 @@ namespace SEEK_MANAGER
             }
         }
 
-        private void LoadData()
+        private void LoadData(bool forceDb = false)
         {
             try
             {
                 var period = cbPeriod.SelectedItem?.ToString() ?? "JOUR";
                 var dt = dtRef.Value.Date;
-                if (summaryMode)
+                // If forceDb is requested and a fallback loader is provided, prefer it
+                if (forceDb && FallbackLoader != null)
+                {
+                    currentData = FallbackLoader()?.Copy();
+                }
+                else if (initialData != null && !forceDb)
+                {
+                    currentData = initialData.Copy();
+                }
+                else if (summaryMode)
                 {
                     currentData = hm.GetEtatSortieSummary(period, dt); // Summary mode
                 }

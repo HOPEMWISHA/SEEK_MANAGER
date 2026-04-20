@@ -49,17 +49,11 @@ namespace SEEK_MANAGER
             {
                 try
                 {
-                    var items = new System.Collections.Generic.List<string>();
-                    foreach (DataGridViewRow row in guna2DataGridView1.Rows)
-                    {
-                        if (row.IsNewRow) continue;
-                        var cells = new System.Collections.Generic.List<string>();
-                        foreach (DataGridViewCell c in row.Cells)
-                            cells.Add(c.Value?.ToString() ?? string.Empty);
-                        items.Add(string.Join(" | ", cells));
-                    }
-                    // show summary dialog similar to hospitalisation
-                    using var f = new EtatSortieForm(hm, summary: true);
+                    DataTable? dt = null;
+                    try { if (guna2DataGridView1.DataSource is DataView dv) dt = dv.ToTable(); else if (guna2DataGridView1.DataSource is DataTable dt2) dt = dt2.Copy(); } catch { dt = null; }
+                    if (dt == null) { try { dt = hm.GetConsultationsTable(); } catch { dt = new DataTable(); } }
+                    using var f = new EtatSortieForm(hm, dt ?? new DataTable(), "CONSULTATION - État de sortie");
+                    f.FallbackLoader = () => { try { return hm.GetConsultationsTable(); } catch { return null; } };
                     f.ShowDialog(this);
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message); }

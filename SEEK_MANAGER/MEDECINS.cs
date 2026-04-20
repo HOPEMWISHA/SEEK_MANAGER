@@ -68,7 +68,11 @@ namespace SEEK_MANAGER
             {
                 try
                 {
-                    using var f = new EtatSortieForm(hm, summary: true);
+                    DataTable? dt = null;
+                    try { if (guna2DataGridView1.DataSource is DataView dv) dt = dv.ToTable(); else if (guna2DataGridView1.DataSource is DataTable dt2) dt = dt2.Copy(); } catch { dt = null; }
+                    if (dt == null) { try { dt = hm.GetMedecinsFullTable(); } catch { dt = new DataTable(); } }
+                    using var f = new EtatSortieForm(hm, dt ?? new DataTable(), "MEDECINS - État de sortie");
+                    f.FallbackLoader = () => { try { return hm.GetMedecinsFullTable(); } catch { return null; } };
                     f.ShowDialog(this);
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message); }

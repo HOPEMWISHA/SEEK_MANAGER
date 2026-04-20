@@ -44,12 +44,17 @@ namespace SEEK_MANAGER
                 catch { }
             });
 
-            // Open summary version of Etat de sortie (same summary view as HOSPITALISATION uses)
+            // Open Etat de sortie showing the full columns from the data source of this form
             guna2EtatSortie.Click += (s, e) =>
             {
                 try
                 {
-                    using var f = new EtatSortieForm(hm, summary: true);
+                    DataTable? dt = null;
+                    try { if (guna2DataGridView1.DataSource is DataView dv) dt = dv.ToTable(); else if (guna2DataGridView1.DataSource is DataTable dt2) dt = dt2.Copy(); } catch { dt = null; }
+                    if (dt == null) { try { dt = hm.GetPatientsFullTable(); } catch { dt = new DataTable(); } }
+                    using var f = new EtatSortieForm(hm, dt ?? new DataTable(), "PATIENT - État de sortie");
+                    // allow the dialog to fetch fresh DB data when clicking 'Afficher'
+                    f.FallbackLoader = () => { try { return hm.GetPatientsFullTable(); } catch { return null; } };
                     f.ShowDialog(this);
                 }
                 catch (Exception ex) { MessageBox.Show(ex.Message); }

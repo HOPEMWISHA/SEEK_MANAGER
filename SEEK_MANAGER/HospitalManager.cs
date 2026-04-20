@@ -27,6 +27,57 @@ namespace SEEK_MANAGER
             }
         }
 
+        // Return consultations table (with patient and medecin names)
+        public DataTable GetConsultationsTable()
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = @"SELECT c.id_consultation, c.date_consultation, c.diagnostic, c.traitement,
+                                      p.nom AS patient_nom,
+                                      m.nom AS medecin_nom
+                               FROM consultation c
+                               LEFT JOIN patient p ON c.id_patient = p.id_patient
+                               LEFT JOIN medecin m ON c.id_medecin = m.id_medecin";
+
+                var da = new MySqlDataAdapter(sql, con);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        // Return full patients table (all columns)
+        public DataTable GetPatientsFullTable()
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = "SELECT * FROM patient";
+                var da = new MySqlDataAdapter(sql, con);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        // Return medecins with service name (full columns for medecin view)
+        public DataTable GetMedecinsFullTable()
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = @"SELECT m.id_medecin, m.nom, m.specialite, m.id_service,
+                                      s.nom_service AS service_nom
+                               FROM medecin m
+                               LEFT JOIN service s ON m.id_service = s.id_service";
+                var da = new MySqlDataAdapter(sql, con);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
         public int GetTotalMedecins()
         {
             using (var con = GetConnection())
