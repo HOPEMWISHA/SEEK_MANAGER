@@ -15,7 +15,7 @@ namespace SEEK_MANAGER
         private Panel detailsPanel;
         private PictureBox mainImage;
 
-        private Button btnPatient, btnMedecin, btnConsultation, btnHospitalisation, btnService;
+        private Button btnPatient, btnMedecin, btnConsultation, btnHospitalisation, btnService, btnPaiement;
         private HospitalManager hm = new HospitalManager();
         private UserControl currentControl;
 
@@ -172,12 +172,14 @@ namespace SEEK_MANAGER
             btnConsultation = MakeSidebarButton("CONSULTATION");
             btnHospitalisation = MakeSidebarButton("HOSPITALISATION");
             btnService = MakeSidebarButton("SERVICE");
+            btnPaiement = MakeSidebarButton("PAIEMENT");
 
             btnPatient.Click += (s, e) => { SetActiveButton(btnPatient); LoadUserControl(new PatientControl()); };
             btnMedecin.Click += (s, e) => { SetActiveButton(btnMedecin); LoadUserControl(new MedecinControl()); };
             btnConsultation.Click += (s, e) => { SetActiveButton(btnConsultation); LoadUserControl(new ConsultationControl()); };
             btnHospitalisation.Click += (s, e) => { SetActiveButton(btnHospitalisation); LoadUserControl(new HospitalisationControl()); };
             btnService.Click += (s, e) => { SetActiveButton(btnService); LoadUserControl(new ServiceControl()); };
+            btnPaiement.Click += (s, e) => { SetActiveButton(btnPaiement); LoadUserControl(new PaiementControl()); };
 
             var sidebarLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 7 };
             // increase top area for logo/image
@@ -230,6 +232,7 @@ namespace SEEK_MANAGER
             sidebarLayout.Controls.Add(btnConsultation, 0, 3);
             sidebarLayout.Controls.Add(btnHospitalisation, 0, 4);
             sidebarLayout.Controls.Add(btnService, 0, 5);
+            sidebarLayout.Controls.Add(btnPaiement, 0, 6);
             sidebar.Controls.Add(sidebarLayout);
 
             // Add to form

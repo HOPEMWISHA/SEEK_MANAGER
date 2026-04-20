@@ -314,6 +314,123 @@ namespace SEEK_MANAGER
             }
         }
 
+        // =====================================================
+        // PAIEMENT → Form : PaiementForm / Control : PaiementControl
+        // =====================================================
+
+        // Return payments table with patient name when available
+        public DataTable GetPaymentsTable()
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = @"SELECT p.id, p.patient_id, CONCAT(pt.nom, ' ', pt.prenom) AS patient_nom,
+                                      p.reference, p.amount, p.currency, p.method, p.paid_at, p.notes
+                               FROM paiement p
+                               LEFT JOIN patient pt ON p.patient_id = pt.id_patient
+                               WHERE p.is_deleted IS NULL OR p.is_deleted = 0";
+                var da = new MySqlDataAdapter(sql, con);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        public DataTable GetPaymentById(int id)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = @"SELECT p.id, p.patient_id, p.reference, p.amount, p.currency, p.method, p.paid_at, p.notes
+                               FROM paiement p WHERE p.id = @id";
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@id", id);
+                var da = new MySqlDataAdapter(cmd);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        // Return payments for a specific patient (not including deleted)
+        public DataTable GetPaymentsByPatientId(int patientId)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = @"SELECT p.id, p.patient_id, CONCAT(pt.nom, ' ', pt.prenom) AS patient_nom,
+                                      p.reference, p.amount, p.currency, p.method, p.paid_at, p.notes
+                               FROM paiement p
+                               LEFT JOIN patient pt ON p.patient_id = pt.id_patient
+                               WHERE (p.is_deleted IS NULL OR p.is_deleted = 0) AND p.patient_id = @pid";
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@pid", patientId);
+                var da = new MySqlDataAdapter(cmd);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        public void AjouterPAIEMENT(int? patientId, string reference, decimal amount, string currency, string method, DateTime paidAt, string notes)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = @"INSERT INTO paiement (patient_id, reference, amount, currency, method, paid_at, created_at, notes, is_deleted)
+                               VALUES (@pid, @ref, @amt, @cur, @method, @paid, NOW(), @notes, 0)";
+                var cmd = new MySqlCommand(sql, con);
+                if (patientId.HasValue)
+                    cmd.Parameters.AddWithValue("@pid", patientId.Value);
+                else
+                    cmd.Parameters.AddWithValue("@pid", DBNull.Value);
+                cmd.Parameters.AddWithValue("@ref", reference ?? string.Empty);
+                cmd.Parameters.AddWithValue("@amt", amount);
+                cmd.Parameters.AddWithValue("@cur", currency ?? "");
+                cmd.Parameters.AddWithValue("@method", method ?? "");
+                cmd.Parameters.AddWithValue("@paid", paidAt);
+                cmd.Parameters.AddWithValue("@notes", notes ?? string.Empty);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public void ModifierPAIEMENT(int id, int? patientId, string reference, decimal amount, string currency, string method, DateTime paidAt, string notes)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = @"UPDATE paiement SET patient_id=@pid, reference=@ref, amount=@amt, currency=@cur,
+                                     method=@method, paid_at=@paid, notes=@notes, updated_at=NOW()
+                               WHERE id=@id";
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@id", id);
+                if (patientId.HasValue)
+                    cmd.Parameters.AddWithValue("@pid", patientId.Value);
+                else
+                    cmd.Parameters.AddWithValue("@pid", DBNull.Value);
+                cmd.Parameters.AddWithValue("@ref", reference ?? string.Empty);
+                cmd.Parameters.AddWithValue("@amt", amount);
+                cmd.Parameters.AddWithValue("@cur", currency ?? "");
+                cmd.Parameters.AddWithValue("@method", method ?? "");
+                cmd.Parameters.AddWithValue("@paid", paidAt);
+                cmd.Parameters.AddWithValue("@notes", notes ?? string.Empty);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // The control calls DeletePayment; keep the English name for compatibility
+        public void DeletePayment(int id)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = "DELETE FROM paiement WHERE id=@id";
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
         // Summary: count of sorties grouped by service for a period
         public DataTable GetEtatSortieSummary(string period, DateTime referenceDate)
         {
