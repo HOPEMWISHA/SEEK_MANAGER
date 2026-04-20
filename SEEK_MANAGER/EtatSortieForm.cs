@@ -6,6 +6,7 @@ using System.IO;
 using System.Windows.Forms;
 using PdfSharpCore.Pdf;
 using PdfSharpCore.Drawing;
+using Guna.UI2.WinForms;
 using System.Diagnostics; // Added for Process
 
 namespace SEEK_MANAGER
@@ -14,11 +15,13 @@ namespace SEEK_MANAGER
     {
         private readonly HospitalManager hm;
         private readonly bool summaryMode;
-        private ComboBox cbPeriod;
-        private DateTimePicker dtRef;
-        private Button btnApply;
-        private Button btnPrint;
-        private DataGridView dgv;
+        private Guna2ComboBox cbPeriod;
+        private Guna2DateTimePicker dtRef;
+        private Guna2Button btnApply;
+        private Guna2Button btnPrint;
+        private Guna2Button btnExport;
+        private Guna2TextBox txtSearch;
+        private Guna2DataGridView dgv;
 
         private DataTable currentData;
 
@@ -35,29 +38,69 @@ namespace SEEK_MANAGER
             Size = new Size(900, 600);
             StartPosition = FormStartPosition.CenterParent;
 
-            cbPeriod = new ComboBox { Location = new Point(12, 12), Width = 160, DropDownStyle = ComboBoxStyle.DropDownList };
+            // Toolbar using Guna controls
+            cbPeriod = new Guna2ComboBox
+            {
+                Location = new Point(12, 12),
+                Width = 120,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                FillColor = Color.White,
+                ForeColor = Color.FromArgb(33, 37, 41),
+                ItemHeight = 30
+            };
             cbPeriod.Items.AddRange(new object[] { "JOUR", "SEMAINE", "MOIS", "ANNEE" });
             cbPeriod.SelectedIndex = 0;
 
-            dtRef = new DateTimePicker { Location = new Point(184, 12), Width = 160, Format = DateTimePickerFormat.Short };
+            dtRef = new Guna2DateTimePicker { Location = new Point(144, 12), Width = 140, Format = DateTimePickerFormat.Short, FillColor = Color.White };
 
-            btnApply = new Button { Text = "Afficher", Location = new Point(360, 12), Width = 100 };
+            btnApply = new Guna2Button { Text = "Afficher", Location = new Point(300, 12), Width = 100, FillColor = Color.FromArgb(52, 152, 219), ForeColor = Color.White };
             btnApply.Click += (s, e) => LoadData();
 
-            btnPrint = new Button { Text = "Imprimer PDF...", Location = new Point(472, 12), Width = 140 };
+            btnPrint = new Guna2Button { Text = "Imprimer PDF...", Location = new Point(412, 12), Width = 140, FillColor = Color.FromArgb(155, 89, 182), ForeColor = Color.White };
             btnPrint.Click += (s, e) => PrintCurrentData();
 
-            var btnExport = new Button { Text = "Exporter PDF", Location = new Point(624, 12), Width = 140 };
+            btnExport = new Guna2Button { Text = "Exporter PDF", Location = new Point(568, 12), Width = 140, FillColor = Color.FromArgb(46, 204, 113), ForeColor = Color.White };
             btnExport.Click += (s, e) => ExportPdf();
 
-            dgv = new DataGridView { Location = new Point(12, 56), Size = new Size(860, 480), ReadOnly = true, AllowUserToAddRows = false, AllowUserToDeleteRows = false };
+            txtSearch = new Guna2TextBox { PlaceholderText = "Rechercher...", Location = new Point(12, 56), Width = 420, IconLeftSize = new Size(16, 16) };
+            txtSearch.TextChanged += (s, e) =>
+            {
+                try
+                {
+                    if (currentData == null) return;
+                    var dv = currentData.DefaultView;
+                    var q = txtSearch.Text.Trim().Replace("'", "''");
+                    if (string.IsNullOrWhiteSpace(q)) dv.RowFilter = string.Empty;
+                    else
+                    {
+                        var parts = new System.Collections.Generic.List<string>();
+                        foreach (DataColumn c in currentData.Columns)
+                        {
+                            if (c.DataType == typeof(string) || c.DataType == typeof(object))
+                                parts.Add($"CONVERT([{c.ColumnName}], 'System.String') LIKE '%{q}%'");
+                        }
+                        dv.RowFilter = parts.Count == 0 ? string.Empty : string.Join(" OR ", parts);
+                    }
+                }
+                catch { }
+            };
+
+            dgv = new Guna2DataGridView { Location = new Point(12, 96), Size = new Size(860, 480), ReadOnly = true, AllowUserToAddRows = false, AllowUserToDeleteRows = false };
             dgv.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            dgv.EnableHeadersVisualStyles = false;
+            dgv.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(240, 240, 240);
+            dgv.ColumnHeadersDefaultCellStyle.ForeColor = Color.FromArgb(33, 37, 41);
+            dgv.RowTemplate.Height = 30;
+            dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dgv.GridColor = Color.FromArgb(230, 230, 230);
+            dgv.BorderStyle = BorderStyle.None;
 
             Controls.Add(cbPeriod);
             Controls.Add(dtRef);
             Controls.Add(btnApply);
             Controls.Add(btnPrint);
             Controls.Add(btnExport);
+            Controls.Add(txtSearch);
             Controls.Add(dgv);
 
             // load initial data
@@ -160,11 +203,11 @@ namespace SEEK_MANAGER
                 var dt = dtRef.Value.Date;
                 if (summaryMode)
                 {
-                    currentData = hm.GetEtatSortieSummary(period, dt);
+                    currentData = hm.GetEtatSortieSummary(period, dt); // Summary mode
                 }
                 else
                 {
-                    currentData = hm.GetEtatSortie(period, dt);
+                    currentData = hm.GetEtatSortie(period, dt); // Regular mode
                 }
                 dgv.DataSource = currentData?.DefaultView;
                 dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
