@@ -54,7 +54,7 @@ namespace SEEK_MANAGER
         private void InitializeComponents()
         {
             Text = "État de sortie - Filtrer et imprimer";
-            Size = new Size(950, 600);
+            Size = new Size(1120, 600);
             StartPosition = FormStartPosition.CenterParent;
 
             // Toolbar using Guna controls placed in a top FlowLayoutPanel to avoid overlap
