@@ -1,6 +1,6 @@
 voici le script de ma base de données
 
-
+ok
 
 CREATE DATABASE `HopitalDB`
   DEFAULT CHARACTER SET utf8mb4
