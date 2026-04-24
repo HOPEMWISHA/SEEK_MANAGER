@@ -73,6 +73,10 @@ namespace SEEK_MANAGER
                 lblAmount, nudAmount, lblCurrency, txtCurrency, lblMethod, txtMethod,
                 lblPaidAt, dtPaidAt, lblNotes, txtNotes, btnSave, btnCancel });
 
+            // show current user on the form (bottom-left)
+            var lblUser = new Label { Text = "Utilisateur : " + (UserSession.FullName ?? UserSession.Username ?? ""), Left = 10, Top = 320, Width = 380, ForeColor = Color.FromArgb(80,80,80) };
+            main.Controls.Add(lblUser);
+
             Controls.Add(main);
         }
 

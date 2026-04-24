@@ -20,6 +20,14 @@ namespace SEEK_MANAGER
                 return;
             }
 
+            // Ensure admin schema (columns like role, sortie_par, statut) exist/normalized
+            try
+            {
+                var hm = new HospitalManager();
+                hm.EnsureAdminSchema();
+            }
+            catch { }
+
             // show login before main dashboard
             using (var lf = new LoginForm())
             {
@@ -39,7 +47,22 @@ namespace SEEK_MANAGER
             }
             catch { }
 
-            Application.Run(new MainDashboard());
+            // Open Admin dashboard if user is admin, otherwise regular dashboard
+            try
+            {
+                if (UserSession.IsAdmin)
+                {
+                    Application.Run(new Admin.AdminDashboard());
+                }
+                else
+                {
+                    Application.Run(new MainDashboard());
+                }
+            }
+            catch
+            {
+                Application.Run(new MainDashboard());
+            }
         }
     }
 }

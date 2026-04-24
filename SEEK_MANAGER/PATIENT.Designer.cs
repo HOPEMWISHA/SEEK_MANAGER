@@ -60,7 +60,7 @@
             guna2TextBox1 = new Guna.UI2.WinForms.Guna2TextBox();
             guna2ComboBoxSexe = new Guna.UI2.WinForms.Guna2ComboBox();
             guna2TextBox3 = new Guna.UI2.WinForms.Guna2TextBox();
-            guna2TextBox4 = new Guna.UI2.WinForms.Guna2TextBox();
+            guna2TextBox4 = new Guna.UI2.WinForms.Guna2DateTimePicker();
             guna2TextBox5 = new Guna.UI2.WinForms.Guna2TextBox();
             guna2TextBox6 = new Guna.UI2.WinForms.Guna2TextBox();
             guna2TextBox7 = new Guna.UI2.WinForms.Guna2TextBox();
@@ -135,25 +135,17 @@
             guna2TextBox3.Size = new Size(279, 53);
             guna2TextBox3.TabIndex = 2;
             // 
-            // guna2TextBox4
+            // guna2TextBox4 (Date picker)
             // 
-            guna2TextBox4.CustomizableEdges = customizableEdges7;
-            guna2TextBox4.DefaultText = "";
-            guna2TextBox4.DisabledState.BorderColor = Color.FromArgb(208, 208, 208);
-            guna2TextBox4.DisabledState.FillColor = Color.FromArgb(226, 226, 226);
-            guna2TextBox4.DisabledState.ForeColor = Color.FromArgb(138, 138, 138);
-            guna2TextBox4.DisabledState.PlaceholderForeColor = Color.FromArgb(138, 138, 138);
-            guna2TextBox4.FocusedState.BorderColor = Color.FromArgb(94, 148, 255);
-            guna2TextBox4.Font = new Font("Segoe UI", 9F);
-            guna2TextBox4.HoverState.BorderColor = Color.FromArgb(94, 148, 255);
-            guna2TextBox4.Location = new Point(591, 171);
-            guna2TextBox4.Margin = new Padding(4, 5, 4, 5);
-            guna2TextBox4.Name = "guna2TextBox4";
-            guna2TextBox4.PlaceholderText = "DATE_NAISSENCE";
-            guna2TextBox4.SelectedText = "";
-            guna2TextBox4.ShadowDecoration.CustomizableEdges = customizableEdges8;
-            guna2TextBox4.Size = new Size(279, 53);
-            guna2TextBox4.TabIndex = 3;
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox4).BorderRadius = 6;
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox4).Format = DateTimePickerFormat.Short;
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox4).CustomFormat = "yyyy-MM-dd";
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox4).Font = new Font("Segoe UI", 9F);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox4).Location = new Point(591, 171);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox4).Margin = new Padding(4, 5, 4, 5);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox4).Name = "guna2TextBox4";
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox4).Size = new Size(279, 53);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox4).TabIndex = 3;
             // 
             // guna2TextBox5
             // 
@@ -403,7 +395,7 @@
         private Guna.UI2.WinForms.Guna2TextBox guna2TextBox1;
         private Guna.UI2.WinForms.Guna2ComboBox guna2ComboBoxSexe;
         private Guna.UI2.WinForms.Guna2TextBox guna2TextBox3;
-        private Guna.UI2.WinForms.Guna2TextBox guna2TextBox4;
+        private Guna.UI2.WinForms.Guna2DateTimePicker guna2TextBox4;
         private Guna.UI2.WinForms.Guna2TextBox guna2TextBox5;
         private Guna.UI2.WinForms.Guna2TextBox guna2TextBox6;
         private Guna.UI2.WinForms.Guna2TextBox guna2TextBox7;

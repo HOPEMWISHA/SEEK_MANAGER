@@ -57,8 +57,8 @@
             guna2Button2 = new Guna.UI2.WinForms.Guna2Button();
             guna2Button1 = new Guna.UI2.WinForms.Guna2Button();
             guna2DataGridView1 = new Guna.UI2.WinForms.Guna2DataGridView();
-            guna2TextBox7 = new Guna.UI2.WinForms.Guna2TextBox();
-            guna2TextBox6 = new Guna.UI2.WinForms.Guna2TextBox();
+            guna2TextBox7 = new Guna.UI2.WinForms.Guna2DateTimePicker();
+            guna2TextBox6 = new Guna.UI2.WinForms.Guna2DateTimePicker();
             guna2ComboBoxPatient = new Guna.UI2.WinForms.Guna2ComboBox();
             guna2ComboBoxService = new Guna.UI2.WinForms.Guna2ComboBox();
             guna2ComboBoxChambre = new Guna.UI2.WinForms.Guna2ComboBox();
@@ -171,45 +171,27 @@
             guna2DataGridView1.ThemeStyle.RowsStyle.SelectionBackColor = Color.FromArgb(231, 229, 255);
             guna2DataGridView1.ThemeStyle.RowsStyle.SelectionForeColor = Color.FromArgb(71, 69, 94);
             // 
-            // guna2TextBox7
+            // guna2TextBox7 (Date picker)
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox7).BorderRadius = 6;
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox7).Format = DateTimePickerFormat.Short;
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox7).CustomFormat = "yyyy-MM-dd";
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox7).Font = new Font("Segoe UI", 9F);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox7).Location = new Point(25, 313);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox7).Margin = new Padding(4, 5, 4, 5);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox7).Name = "guna2TextBox7";
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox7).Size = new Size(318, 53);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox7).TabIndex = 29;
             // 
-            guna2TextBox7.CustomizableEdges = customizableEdges7;
-            guna2TextBox7.DefaultText = "";
-            guna2TextBox7.DisabledState.BorderColor = Color.FromArgb(208, 208, 208);
-            guna2TextBox7.DisabledState.FillColor = Color.FromArgb(226, 226, 226);
-            guna2TextBox7.DisabledState.ForeColor = Color.FromArgb(138, 138, 138);
-            guna2TextBox7.DisabledState.PlaceholderForeColor = Color.FromArgb(138, 138, 138);
-            guna2TextBox7.FocusedState.BorderColor = Color.FromArgb(94, 148, 255);
-            guna2TextBox7.Font = new Font("Segoe UI", 9F);
-            guna2TextBox7.HoverState.BorderColor = Color.FromArgb(94, 148, 255);
-            guna2TextBox7.Location = new Point(25, 313);
-            guna2TextBox7.Margin = new Padding(4, 5, 4, 5);
-            guna2TextBox7.Name = "guna2TextBox7";
-            guna2TextBox7.PlaceholderText = "DATE_SORTIE";
-            guna2TextBox7.SelectedText = "";
-            guna2TextBox7.ShadowDecoration.CustomizableEdges = customizableEdges8;
-            guna2TextBox7.Size = new Size(318, 53);
-            guna2TextBox7.TabIndex = 29;
-            // 
-            // guna2TextBox6
-            // 
-            guna2TextBox6.CustomizableEdges = customizableEdges9;
-            guna2TextBox6.DefaultText = "";
-            guna2TextBox6.DisabledState.BorderColor = Color.FromArgb(208, 208, 208);
-            guna2TextBox6.DisabledState.FillColor = Color.FromArgb(226, 226, 226);
-            guna2TextBox6.DisabledState.ForeColor = Color.FromArgb(138, 138, 138);
-            guna2TextBox6.DisabledState.PlaceholderForeColor = Color.FromArgb(138, 138, 138);
-            guna2TextBox6.FocusedState.BorderColor = Color.FromArgb(94, 148, 255);
-            guna2TextBox6.Font = new Font("Segoe UI", 9F);
-            guna2TextBox6.HoverState.BorderColor = Color.FromArgb(94, 148, 255);
-            guna2TextBox6.Location = new Point(25, 198);
-            guna2TextBox6.Margin = new Padding(4, 5, 4, 5);
-            guna2TextBox6.Name = "guna2TextBox6";
-            guna2TextBox6.PlaceholderText = "DATE_ENTREE";
-            guna2TextBox6.SelectedText = "";
-            guna2TextBox6.ShadowDecoration.CustomizableEdges = customizableEdges10;
-            guna2TextBox6.Size = new Size(318, 53);
-            guna2TextBox6.TabIndex = 28;
+            // guna2TextBox6 (Date picker)
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).BorderRadius = 6;
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Format = DateTimePickerFormat.Short;
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).CustomFormat = "yyyy-MM-dd";
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Font = new Font("Segoe UI", 9F);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Location = new Point(25, 198);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Margin = new Padding(4, 5, 4, 5);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Name = "guna2TextBox6";
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Size = new Size(318, 53);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).TabIndex = 28;
             // 
             // guna2ComboBoxPatient
             // 
@@ -259,7 +241,7 @@
             guna2ComboBoxChambre.ForeColor = Color.FromArgb(68, 88, 112);
             guna2ComboBoxChambre.FormattingEnabled = true;
             guna2ComboBoxChambre.ItemHeight = 47;
-            guna2ComboBoxChambre.Items.AddRange(new object[] { "CH001", "CH002", "CH003", "CH004", "CH005", "CH006", "CH007", "CH008", "CH009", "CH010", "CH011", "CH012", "CH013", "CH014", "CH015" });
+            // Items will be loaded dynamically from the chambre table
             guna2ComboBoxChambre.Location = new Point(407, 95);
             guna2ComboBoxChambre.Margin = new Padding(4, 5, 4, 5);
             guna2ComboBoxChambre.Name = "guna2ComboBoxChambre";
@@ -299,6 +281,7 @@
             guna2SearchBox.SelectedText = "";
             guna2SearchBox.ShadowDecoration.CustomizableEdges = customizableEdges20;
             guna2SearchBox.Size = new Size(1611, 48);
+            guna2SearchBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             guna2SearchBox.TabIndex = 300;
             // 
             // guna2EtatSortie
@@ -311,6 +294,7 @@
             guna2EtatSortie.Name = "guna2EtatSortie";
             guna2EtatSortie.ShadowDecoration.CustomizableEdges = customizableEdges22;
             guna2EtatSortie.Size = new Size(288, 68);
+            guna2EtatSortie.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             guna2EtatSortie.TabIndex = 301;
             guna2EtatSortie.Text = "\U0001f7e2 ETAT_DE_SORTIE";
             // 
@@ -345,8 +329,8 @@
         private Guna.UI2.WinForms.Guna2TextBox guna2SearchBox;
         private Guna.UI2.WinForms.Guna2Button guna2EtatSortie;
         private Guna.UI2.WinForms.Guna2DataGridView guna2DataGridView1;
-        private Guna.UI2.WinForms.Guna2TextBox guna2TextBox7;
-        private Guna.UI2.WinForms.Guna2TextBox guna2TextBox6;
+        private Guna.UI2.WinForms.Guna2DateTimePicker guna2TextBox7;
+        private Guna.UI2.WinForms.Guna2DateTimePicker guna2TextBox6;
         private Guna.UI2.WinForms.Guna2ComboBox guna2ComboBoxChambre;
         private Guna.UI2.WinForms.Guna2ComboBox guna2ComboBoxPatient;
         private Guna.UI2.WinForms.Guna2ComboBox guna2ComboBoxService;

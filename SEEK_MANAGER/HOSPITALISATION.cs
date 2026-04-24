@@ -186,12 +186,16 @@ namespace SEEK_MANAGER
                 try { idPatient = Convert.ToInt32(guna2ComboBoxPatient.SelectedValue ?? 0); } catch { idPatient = 0; }
                 try { idService = Convert.ToInt32(guna2ComboBoxService.SelectedValue ?? 0); } catch { idService = 0; }
 
-                DateTime dateEntree;
-                if (!DateTime.TryParse(guna2TextBox6.Text.Trim(), out dateEntree)) dateEntree = DateTime.Today;
-                DateTime dateSortie;
-                if (!DateTime.TryParse(guna2TextBox7.Text.Trim(), out dateSortie)) dateSortie = DateTime.Today;
+                // Prefer Value from the date pickers. For sortie, treat empty text as no date provided.
+                DateTime dateEntree = guna2TextBox6.Value.Date;
+                DateTime? dateSortie = null;
+                var sortieText = (guna2TextBox7.Text ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(sortieText) && !sortieText.StartsWith("0000"))
+                {
+                    dateSortie = guna2TextBox7.Value.Date;
+                }
 
-                hm.AjouterHOSPITALISATION(chambre, idPatient, idService, dateEntree, dateSortie);
+                hm.AjouterHOSPITALISATION(chambre, idPatient, idService, dateEntree, dateSortie, null);
                 MessageBox.Show("Hospitalisation ajoutée.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 RefreshGrid();
                 ClearFields();
@@ -218,10 +222,13 @@ namespace SEEK_MANAGER
                 try { idPatient = Convert.ToInt32(guna2ComboBoxPatient.SelectedValue ?? 0); } catch { idPatient = 0; }
                 try { idService = Convert.ToInt32(guna2ComboBoxService.SelectedValue ?? 0); } catch { idService = 0; }
 
-                DateTime dateEntree;
-                if (!DateTime.TryParse(guna2TextBox6.Text.Trim(), out dateEntree)) dateEntree = DateTime.Today;
-                DateTime dateSortie;
-                if (!DateTime.TryParse(guna2TextBox7.Text.Trim(), out dateSortie)) dateSortie = DateTime.Today;
+                DateTime dateEntree = guna2TextBox6.Value.Date;
+                DateTime? dateSortie = null;
+                var sortieText2 = (guna2TextBox7.Text ?? string.Empty).Trim();
+                if (!string.IsNullOrWhiteSpace(sortieText2) && !sortieText2.StartsWith("0000"))
+                {
+                    dateSortie = guna2TextBox7.Value.Date;
+                }
 
                 hm.ModifierHOSPITALISATION(id, chambre, idPatient, idService, dateEntree, dateSortie);
                 MessageBox.Show("Hospitalisation modifiée.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -334,7 +341,12 @@ namespace SEEK_MANAGER
                 if (DateTime.TryParse(dateEntree, out var dte)) guna2TextBox6.Text = dte.ToShortDateString(); else guna2TextBox6.Text = dateEntree ?? string.Empty;
 
                 var dateSortie = GetCellValue(row, "date_sortie") ?? GetCellValue(row, 5);
-                if (DateTime.TryParse(dateSortie, out var dts)) guna2TextBox7.Text = dts.ToShortDateString(); else guna2TextBox7.Text = dateSortie ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(dateSortie) && dateSortie.StartsWith("0000"))
+                {
+                    // treat invalid zero-date as empty
+                    guna2TextBox7.Text = string.Empty;
+                }
+                else if (DateTime.TryParse(dateSortie, out var dts)) guna2TextBox7.Text = dts.ToShortDateString(); else guna2TextBox7.Text = dateSortie ?? string.Empty;
             }
             catch { }
         }

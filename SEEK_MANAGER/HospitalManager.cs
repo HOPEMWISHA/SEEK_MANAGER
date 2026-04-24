@@ -9,6 +9,20 @@ namespace SEEK_MANAGER
 {
     public class HospitalManager
     {
+        // Event raised when chambres (rooms) change so UI can refresh comboboxes/lists
+        public static event Action? ChambresChanged;
+
+        private static void RaiseChambresChanged()
+        {
+            try { ChambresChanged?.Invoke(); } catch { }
+        }
+
+        // Public helper to notify listeners from other types
+        public static void NotifyChambresChanged()
+        {
+            RaiseChambresChanged();
+        }
+
         private MySqlConnection GetConnection()
         {
             return MySqlDbManager.Instance.GetConnection();
@@ -54,6 +68,305 @@ namespace SEEK_MANAGER
                 var dt = new DataTable();
                 da.Fill(dt);
                 return dt;
+            }
+        }
+
+        // ==========================
+        // ADMIN: Chambres & Users
+        // ==========================
+
+        // Ensure chambre and users tables and helpful triggers exist
+        public void EnsureAdminSchema()
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                // create chambre table
+                string createChambre = @"CREATE TABLE IF NOT EXISTS chambre (
+                    id_chambre INT AUTO_INCREMENT PRIMARY KEY,
+                    numero VARCHAR(64) NOT NULL UNIQUE,
+                    type VARCHAR(128),
+                    statut VARCHAR(32) DEFAULT 'Libre',
+                    role VARCHAR(64) DEFAULT 'Général'
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+                var cmd = new MySqlCommand(createChambre, con);
+                cmd.ExecuteNonQuery();
+                // ensure role column exists for older installations
+                try
+                {
+                    // Add role column if missing (older MySQL versions may not support IF NOT EXISTS)
+                    try
+                    {
+                        string addRole = "ALTER TABLE chambre ADD COLUMN role VARCHAR(64) DEFAULT 'Général'";
+                        var cmd2 = new MySqlCommand(addRole, con);
+                        cmd2.ExecuteNonQuery();
+                    }
+                    catch { }
+                }
+                catch { /* IF NOT EXISTS may not be supported on all MySQL versions; ignore if fails */ }
+
+                // create users table if missing (minimal fields for admin panel)
+                string createUsers = @"CREATE TABLE IF NOT EXISTS users (
+                    id_user INT AUTO_INCREMENT PRIMARY KEY,
+                    full_name VARCHAR(200),
+                    username VARCHAR(100) NOT NULL UNIQUE,
+                    password_hash VARCHAR(255) NOT NULL,
+                    role VARCHAR(50) DEFAULT 'Utilisateur',
+                    email VARCHAR(200)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+                cmd = new MySqlCommand(createUsers, con);
+                cmd.ExecuteNonQuery();
+
+                // create a trigger to prevent assigning a patient to an already occupied room
+                try
+                {
+                    string dropTrig = "DROP TRIGGER IF EXISTS before_insert_hospitalisation_check_chambre";
+                    cmd = new MySqlCommand(dropTrig, con); cmd.ExecuteNonQuery();
+
+                    string createTrig = @"CREATE TRIGGER before_insert_hospitalisation_check_chambre
+                    BEFORE INSERT ON hospitalisation
+                    FOR EACH ROW
+                    BEGIN
+                      DECLARE s VARCHAR(32);
+                      SELECT statut INTO s FROM chambre WHERE numero = NEW.chambre LIMIT 1;
+                      IF s = 'Occupée' THEN
+                        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'La chambre est déjà occupée.';
+                      END IF;
+                    END;";
+                    cmd = new MySqlCommand(createTrig, con);
+                    cmd.ExecuteNonQuery();
+                }
+                catch { /* triggers may fail on some MySQL versions; schema checks still help */ }
+
+                // Ensure hospitalisation has a column to record which user performed the sortie (discharge)
+                try
+                {
+                    try
+                    {
+                        string addSortiePar = "ALTER TABLE hospitalisation ADD COLUMN sortie_par VARCHAR(200) DEFAULT NULL";
+                        var cmdSort = new MySqlCommand(addSortiePar, con);
+                        cmdSort.ExecuteNonQuery();
+                    }
+                    catch { }
+
+                    // Normalize invalid zero-dates to NULL to avoid MySQL rejecting them in strict modes
+                    try
+                    {
+                        string nulldates = "UPDATE hospitalisation SET date_sortie = NULL WHERE date_sortie = '0000-00-00' OR date_sortie = ''";
+                        var cmdNull = new MySqlCommand(nulldates, con);
+                        cmdNull.ExecuteNonQuery();
+                    }
+                    catch { }
+
+                    try
+                    {
+                        string modifyDate = "ALTER TABLE hospitalisation MODIFY COLUMN date_sortie DATE NULL";
+                        var cmdModDate = new MySqlCommand(modifyDate, con);
+                        cmdModDate.ExecuteNonQuery();
+                    }
+                    catch { }
+                }
+                catch { }
+            }
+        }
+
+        public DataTable GetChambresTable()
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = "SELECT id_chambre, numero, type, statut, COALESCE(role, 'Général') AS role FROM chambre";
+                var da = new MySqlDataAdapter(sql, con);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        public void AddChambre(string numero, string type, string statut, string role = "Général")
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = "INSERT INTO chambre (numero, type, statut, role) VALUES (@num,@type,@stat,@role)";
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@num", numero);
+                cmd.Parameters.AddWithValue("@type", type ?? string.Empty);
+                cmd.Parameters.AddWithValue("@stat", statut ?? "Libre");
+                cmd.Parameters.AddWithValue("@role", role ?? "Général");
+                cmd.ExecuteNonQuery();
+            }
+            // notify listeners
+            RaiseChambresChanged();
+        }
+
+        public void UpdateChambre(int id, string numero, string type, string statut, string role = "Général")
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = "UPDATE chambre SET numero=@num, type=@type, statut=@stat, role=@role WHERE id_chambre=@id";
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.Parameters.AddWithValue("@num", numero);
+                cmd.Parameters.AddWithValue("@type", type ?? string.Empty);
+                cmd.Parameters.AddWithValue("@stat", statut ?? "Libre");
+                cmd.Parameters.AddWithValue("@role", role ?? "Général");
+                cmd.ExecuteNonQuery();
+            }
+            // notify listeners
+            RaiseChambresChanged();
+        }
+
+        public void DeleteChambre(int id)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = "DELETE FROM chambre WHERE id_chambre=@id";
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        // Assign a patient to a chambre, checking status and updating both hospitalisation and chambre tables
+        public void AssignPatientToChambre(string numeroChambre, int idPatient, int idService, DateTime dateEntree)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                using (var tx = con.BeginTransaction())
+                {
+                    // check chambre status
+                    string stSql = "SELECT statut FROM chambre WHERE numero=@num FOR UPDATE";
+                    var stCmd = new MySqlCommand(stSql, con, tx);
+                    stCmd.Parameters.AddWithValue("@num", numeroChambre);
+                    var st = stCmd.ExecuteScalar() as string ?? "Libre";
+                    if (string.Equals(st, "Occupée", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException("La chambre est déjà occupée.");
+                    }
+
+                    // insert hospitalisation
+                    MySqlCommand icmd;
+                    if (idService <= 0)
+                    {
+                        // insert without id_service to avoid FK constraint when no service is provided
+                        string insNoService = "INSERT INTO hospitalisation (chambre, id_patient, date_entree) VALUES (@ch,@idp,@ent)";
+                        icmd = new MySqlCommand(insNoService, con, tx);
+                        icmd.Parameters.AddWithValue("@ch", numeroChambre);
+                        icmd.Parameters.AddWithValue("@idp", idPatient);
+                        icmd.Parameters.AddWithValue("@ent", dateEntree);
+                        icmd.ExecuteNonQuery();
+                    }
+                    else
+                    {
+                        string ins = "INSERT INTO hospitalisation (chambre, id_patient, id_service, date_entree) VALUES (@ch,@idp,@ids,@ent)";
+                        icmd = new MySqlCommand(ins, con, tx);
+                        icmd.Parameters.AddWithValue("@ch", numeroChambre);
+                        icmd.Parameters.AddWithValue("@idp", idPatient);
+                        icmd.Parameters.AddWithValue("@ids", idService);
+                        icmd.Parameters.AddWithValue("@ent", dateEntree);
+                        icmd.ExecuteNonQuery();
+                    }
+
+                    // update chambre statut
+                    string upd = "UPDATE chambre SET statut='Occupée' WHERE numero=@num";
+                    var ucmd = new MySqlCommand(upd, con, tx);
+                    ucmd.Parameters.AddWithValue("@num", numeroChambre);
+                    ucmd.ExecuteNonQuery();
+
+                    tx.Commit();
+                }
+            }
+        }
+
+        public void ReleaseChambre(string numeroChambre)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                using (var tx = con.BeginTransaction())
+                {
+                    // set last hospitalisation's date_sortie if any
+                    string updHosp = @"UPDATE hospitalisation h
+                        SET h.date_sortie = NOW()
+                        WHERE h.chambre = @num AND (h.date_sortie IS NULL OR h.date_sortie = '0000-00-00')
+                        ORDER BY h.id_hospitalisation DESC LIMIT 1";
+                    var hcmd = new MySqlCommand(updHosp, con, tx);
+                    hcmd.Parameters.AddWithValue("@num", numeroChambre);
+                    hcmd.ExecuteNonQuery();
+
+                    // update chambre statut
+                    string upd = "UPDATE chambre SET statut='Libre' WHERE numero=@num";
+                    var ucmd = new MySqlCommand(upd, con, tx);
+                    ucmd.Parameters.AddWithValue("@num", numeroChambre);
+                    ucmd.ExecuteNonQuery();
+
+                    tx.Commit();
+                }
+            }
+        }
+
+        // Users management
+        public DataTable GetUsersTable()
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = "SELECT id_user, full_name, username, role, email FROM users";
+                var da = new MySqlDataAdapter(sql, con);
+                var dt = new DataTable();
+                da.Fill(dt);
+                return dt;
+            }
+        }
+
+        public void AddUser(string fullName, string username, string passwordHash, string role, string email)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = "INSERT INTO users (full_name, username, password_hash, role, email) VALUES (@f,@u,@p,@r,@e)";
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@f", fullName ?? string.Empty);
+                cmd.Parameters.AddWithValue("@u", username);
+                cmd.Parameters.AddWithValue("@p", passwordHash);
+                cmd.Parameters.AddWithValue("@r", role ?? "Utilisateur");
+                cmd.Parameters.AddWithValue("@e", email ?? string.Empty);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public void UpdateUser(int id, string fullName, string username, string? passwordHash, string role, string email)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = passwordHash == null ?
+                    "UPDATE users SET full_name=@f, username=@u, role=@r, email=@e WHERE id_user=@id" :
+                    "UPDATE users SET full_name=@f, username=@u, password_hash=@p, role=@r, email=@e WHERE id_user=@id";
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.Parameters.AddWithValue("@f", fullName ?? string.Empty);
+                cmd.Parameters.AddWithValue("@u", username);
+                if (passwordHash != null) cmd.Parameters.AddWithValue("@p", passwordHash);
+                cmd.Parameters.AddWithValue("@r", role ?? "Utilisateur");
+                cmd.Parameters.AddWithValue("@e", email ?? string.Empty);
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        public void DeleteUser(int id)
+        {
+            using (var con = GetConnection())
+            {
+                con.Open();
+                string sql = "DELETE FROM users WHERE id_user=@id";
+                var cmd = new MySqlCommand(sql, con);
+                cmd.Parameters.AddWithValue("@id", id);
+                cmd.ExecuteNonQuery();
             }
         }
 
@@ -836,40 +1149,83 @@ namespace SEEK_MANAGER
             using (var con = GetConnection())
             {
                 con.Open();
-
-                // business rule: a patient cannot be admitted and discharged on the same day
-                if (dateSortie.HasValue && dateEntree.Date == dateSortie.Value.Date)
+                using (var tx = con.BeginTransaction())
                 {
-                    throw new InvalidOperationException("La date de sortie ne peut pas être la même que la date d'entrée.");
+                    // business rule: a patient cannot be admitted and discharged on the same day
+                    if (dateSortie.HasValue && dateEntree.Date == dateSortie.Value.Date)
+                    {
+                        throw new InvalidOperationException("La date de sortie ne peut pas être la même que la date d'entrée.");
+                    }
+
+                    // date_sortie must be strictly in the future (not today and not in the past)
+                    if (dateSortie.HasValue && dateSortie.Value.Date <= DateTime.Today)
+                    {
+                        throw new InvalidOperationException("La date de sortie doit être postérieure à la date actuelle.");
+                    }
+
+                    // check chambre status to prevent assigning into an already occupied room
+                    try
+                    {
+                        // ensure there is no active hospitalisation for this chambre
+                        string chkActive = "SELECT COUNT(*) FROM hospitalisation WHERE chambre=@num AND (date_sortie IS NULL OR DATE(date_sortie) >= CURDATE())";
+                        var ccmd = new MySqlCommand(chkActive, con, tx);
+                        ccmd.Parameters.AddWithValue("@num", chambre);
+                        var cnt = Convert.ToInt32(ccmd.ExecuteScalar());
+                        if (cnt > 0)
+                        {
+                            throw new InvalidOperationException("La chambre est déjà occupée (hospitalisation active).");
+                        }
+                    }
+                    catch (InvalidOperationException) { throw; }
+                    catch { /* ignore check failure, proceed */ }
+
+                    bool hasMedecinColumn = ColumnExists(con, "hospitalisation", "id_medecin");
+                    bool hasSortiePar = ColumnExists(con, "hospitalisation", "sortie_par");
+
+                    string sql;
+                    if (hasMedecinColumn && idMedecin.HasValue)
+                    {
+                        sql = @"INSERT INTO hospitalisation (chambre, id_patient, id_service, id_medecin, date_entree, date_sortie" + (hasSortiePar ? ", sortie_par)" : ")") +
+                              " VALUES (@chambre, @idp, @ids, @idm, @entree, @sortie" + (hasSortiePar ? ", @sortie_par)" : ")");
+                    }
+                    else
+                    {
+                        sql = @"INSERT INTO hospitalisation (chambre, id_patient, id_service, date_entree, date_sortie" + (hasSortiePar ? ", sortie_par)" : ")") +
+                              " VALUES (@chambre, @idp, @ids, @entree, @sortie" + (hasSortiePar ? ", @sortie_par)" : ")");
+                    }
+
+                    var cmd = new MySqlCommand(sql, con, tx);
+                    cmd.Parameters.AddWithValue("@chambre", chambre);
+                    cmd.Parameters.AddWithValue("@idp", idPatient);
+                    cmd.Parameters.AddWithValue("@ids", idService);
+                    if (hasMedecinColumn && idMedecin.HasValue)
+                        cmd.Parameters.AddWithValue("@idm", idMedecin.Value);
+                    // explicit date parameters
+                    var pEntree = cmd.Parameters.Add("@entree", MySql.Data.MySqlClient.MySqlDbType.Date);
+                    pEntree.Value = dateEntree.Date;
+                    var pSortie = cmd.Parameters.Add("@sortie", MySql.Data.MySqlClient.MySqlDbType.Date);
+                    pSortie.Value = (dateSortie.HasValue && dateSortie.Value.Year >= 1900) ? (object)dateSortie.Value.Date : DBNull.Value;
+
+                    if (hasSortiePar)
+                    {
+                        var user = UserSession.FullName ?? UserSession.Username ?? string.Empty;
+                        if (dateSortie.HasValue && !string.IsNullOrWhiteSpace(user)) cmd.Parameters.AddWithValue("@sortie_par", user);
+                        else cmd.Parameters.AddWithValue("@sortie_par", DBNull.Value);
+                    }
+
+                    cmd.ExecuteNonQuery();
+
+                    // update chambre statut to Occupée when patient assigned
+                    try
+                    {
+                        var up = new MySqlCommand("UPDATE chambre SET statut='Occupée' WHERE numero=@num", con, tx);
+                        up.Parameters.AddWithValue("@num", chambre);
+                        up.ExecuteNonQuery();
+                    }
+                    catch { }
+
+                    tx.Commit();
                 }
-
-                bool hasMedecinColumn = ColumnExists(con, "hospitalisation", "id_medecin");
-
-                string sql;
-                if (hasMedecinColumn && idMedecin.HasValue)
-                {
-                    sql = @"INSERT INTO hospitalisation (chambre, id_patient, id_service, id_medecin, date_entree, date_sortie)
-                               VALUES (@chambre, @idp, @ids, @idm, @entree, @sortie)";
-                }
-                else
-                {
-                    sql = @"INSERT INTO hospitalisation (chambre, id_patient, id_service, date_entree, date_sortie)
-                               VALUES (@chambre, @idp, @ids, @entree, @sortie)";
-                }
-
-                var cmd = new MySqlCommand(sql, con);
-                cmd.Parameters.AddWithValue("@chambre", chambre);
-                cmd.Parameters.AddWithValue("@idp", idPatient);
-                cmd.Parameters.AddWithValue("@ids", idService);
-                if (hasMedecinColumn && idMedecin.HasValue)
-                    cmd.Parameters.AddWithValue("@idm", idMedecin.Value);
-                cmd.Parameters.AddWithValue("@entree", dateEntree);
-                if (dateSortie.HasValue)
-                    cmd.Parameters.AddWithValue("@sortie", dateSortie.Value);
-                else
-                    cmd.Parameters.AddWithValue("@sortie", DBNull.Value);
-
-                cmd.ExecuteNonQuery();
             }
         }
 
@@ -893,23 +1249,82 @@ namespace SEEK_MANAGER
         }
 
         public void ModifierHOSPITALISATION(int id, string chambre, int idPatient, int idService,
-                                            DateTime dateEntree, DateTime dateSortie)
+                                            DateTime dateEntree, DateTime? dateSortie)
         {
             using (var con = GetConnection())
             {
                 con.Open();
-                string sql = @"UPDATE hospitalisation SET chambre=@chambre, id_patient=@idp, id_service=@ids,
-                               date_entree=@entree, date_sortie=@sortie WHERE id_hospitalisation=@id";
+                using (var tx = con.BeginTransaction())
+                {
+                    // Validate dates
+                    if (dateSortie.HasValue && dateSortie.Value.Date == dateEntree.Date)
+                        throw new InvalidOperationException("La date de sortie ne peut pas être la même que la date d'entrée.");
+                    if (dateSortie.HasValue && dateSortie.Value.Date <= DateTime.Today)
+                        throw new InvalidOperationException("La date de sortie doit être postérieure à la date actuelle.");
 
-                var cmd = new MySqlCommand(sql, con);
-                cmd.Parameters.AddWithValue("@id", id);
-                cmd.Parameters.AddWithValue("@chambre", chambre);
-                cmd.Parameters.AddWithValue("@idp", idPatient);
-                cmd.Parameters.AddWithValue("@ids", idService);
-                cmd.Parameters.AddWithValue("@entree", dateEntree);
-                cmd.Parameters.AddWithValue("@sortie", dateSortie);
+                    // Build SQL dynamically: do not update date_sortie if no valid value provided
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append("UPDATE hospitalisation SET chambre=@chambre, id_patient=@idp, id_service=@ids, date_entree=@entree");
+                    bool willUpdateSortie = dateSortie.HasValue && dateSortie.Value.Year >= 1900;
+                    if (willUpdateSortie) sb.Append(", date_sortie=@sortie");
+                    sb.Append(" WHERE id_hospitalisation=@id");
 
-                cmd.ExecuteNonQuery();
+                    string sql = sb.ToString();
+                    var cmd = new MySqlCommand(sql, con, tx);
+                    cmd.Parameters.AddWithValue("@id", id);
+                    cmd.Parameters.AddWithValue("@chambre", chambre);
+                    cmd.Parameters.AddWithValue("@idp", idPatient);
+                    cmd.Parameters.AddWithValue("@ids", idService);
+                    var pEntree = cmd.Parameters.Add("@entree", MySql.Data.MySqlClient.MySqlDbType.Date);
+                    pEntree.Value = dateEntree.Date;
+                    if (willUpdateSortie)
+                    {
+                        var pSort = cmd.Parameters.Add("@sortie", MySql.Data.MySqlClient.MySqlDbType.Date);
+                        pSort.Value = dateSortie.Value.Date;
+                    }
+
+                    cmd.ExecuteNonQuery();
+
+                    // If sortie_par column exists, update it only after main update
+                    try
+                    {
+                        if (ColumnExists(con, "hospitalisation", "sortie_par"))
+                        {
+                            var user = UserSession.FullName ?? UserSession.Username ?? string.Empty;
+                            string upd = "UPDATE hospitalisation SET sortie_par=@sortie_par WHERE id_hospitalisation=@id";
+                            var ucmd = new MySqlCommand(upd, con, tx);
+                            if (willUpdateSortie && !string.IsNullOrWhiteSpace(user))
+                                ucmd.Parameters.AddWithValue("@sortie_par", user);
+                            else
+                                ucmd.Parameters.AddWithValue("@sortie_par", DBNull.Value);
+                            ucmd.Parameters.AddWithValue("@id", id);
+                            ucmd.ExecuteNonQuery();
+                        }
+                    }
+                    catch { }
+
+                    // if chambre changed or patient released, ensure chambre statut updated appropriately
+                    try
+                    {
+                        // set chambre to Occupée when hospitalisation has no sortie
+                        if (!willUpdateSortie)
+                        {
+                            var upOcc = new MySqlCommand("UPDATE chambre SET statut='Occupée' WHERE numero=@num", con, tx);
+                            upOcc.Parameters.AddWithValue("@num", chambre);
+                            upOcc.ExecuteNonQuery();
+                        }
+                        else
+                        {
+                            // if sortie set, mark chambre as Libre
+                            var upLib = new MySqlCommand("UPDATE chambre SET statut='Libre' WHERE numero=@num", con, tx);
+                            upLib.Parameters.AddWithValue("@num", chambre);
+                            upLib.ExecuteNonQuery();
+                        }
+                    }
+                    catch { }
+
+                    tx.Commit();
+                }
             }
         }
 
@@ -934,7 +1349,7 @@ namespace SEEK_MANAGER
                 string sql = @"SELECT h.id_hospitalisation, h.chambre,
                                       p.nom AS patient_nom,
                                       s.nom_service AS service_nom,
-                                      h.date_entree, h.date_sortie
+                                      h.date_entree, h.date_sortie, h.sortie_par
                                FROM hospitalisation h
                                LEFT JOIN patient p ON h.id_patient = p.id_patient
                                LEFT JOIN service s ON h.id_service = s.id_service";
@@ -1073,7 +1488,7 @@ namespace SEEK_MANAGER
                 if (hasMedecin)
                 {
                     sql = $@"SELECT h.id_hospitalisation, h.chambre, p.nom AS patient_nom, p.prenom AS patient_prenom,
-                                      s.nom_service AS service_nom, m.nom AS medecin_nom, h.date_entree, h.date_sortie
+                                      s.nom_service AS service_nom, m.nom AS medecin_nom, h.date_entree, h.date_sortie, h.sortie_par
                                FROM hospitalisation h
                                LEFT JOIN patient p ON h.id_patient = p.id_patient
                                LEFT JOIN service s ON h.id_service = s.id_service
@@ -1083,7 +1498,7 @@ namespace SEEK_MANAGER
                 else
                 {
                     sql = $@"SELECT h.id_hospitalisation, h.chambre, p.nom AS patient_nom, p.prenom AS patient_prenom,
-                                      s.nom_service AS service_nom, h.date_entree, h.date_sortie
+                                      s.nom_service AS service_nom, h.date_entree, h.date_sortie, h.sortie_par
                                FROM hospitalisation h
                                LEFT JOIN patient p ON h.id_patient = p.id_patient
                                LEFT JOIN service s ON h.id_service = s.id_service

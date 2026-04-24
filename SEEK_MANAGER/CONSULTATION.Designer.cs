@@ -58,7 +58,7 @@
             guna2Button1 = new Guna.UI2.WinForms.Guna2Button();
             guna2DataGridView1 = new Guna.UI2.WinForms.Guna2DataGridView();
             guna2TextBox7 = new Guna.UI2.WinForms.Guna2TextBox();
-            guna2TextBox6 = new Guna.UI2.WinForms.Guna2TextBox();
+            guna2TextBox6 = new Guna.UI2.WinForms.Guna2DateTimePicker();
             guna2TextBox5 = new Guna.UI2.WinForms.Guna2TextBox();
             guna2ComboBoxPatient = new Guna.UI2.WinForms.Guna2ComboBox();
             guna2ComboBoxMedecin = new Guna.UI2.WinForms.Guna2ComboBox();
@@ -193,25 +193,16 @@
             guna2TextBox7.Size = new Size(320, 53);
             guna2TextBox7.TabIndex = 18;
             // 
-            // guna2TextBox6
-            // 
-            guna2TextBox6.CustomizableEdges = customizableEdges9;
-            guna2TextBox6.DefaultText = "";
-            guna2TextBox6.DisabledState.BorderColor = Color.FromArgb(208, 208, 208);
-            guna2TextBox6.DisabledState.FillColor = Color.FromArgb(226, 226, 226);
-            guna2TextBox6.DisabledState.ForeColor = Color.FromArgb(138, 138, 138);
-            guna2TextBox6.DisabledState.PlaceholderForeColor = Color.FromArgb(138, 138, 138);
-            guna2TextBox6.FocusedState.BorderColor = Color.FromArgb(94, 148, 255);
-            guna2TextBox6.Font = new Font("Segoe UI", 9F);
-            guna2TextBox6.HoverState.BorderColor = Color.FromArgb(94, 148, 255);
-            guna2TextBox6.Location = new Point(38, 208);
-            guna2TextBox6.Margin = new Padding(4, 5, 4, 5);
-            guna2TextBox6.Name = "guna2TextBox6";
-            guna2TextBox6.PlaceholderText = "DATE_CONSULTATION";
-            guna2TextBox6.SelectedText = "";
-            guna2TextBox6.ShadowDecoration.CustomizableEdges = customizableEdges10;
-            guna2TextBox6.Size = new Size(320, 53);
-            guna2TextBox6.TabIndex = 17;
+            // guna2TextBox6 (Date picker)
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).BorderRadius = 6;
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Format = DateTimePickerFormat.Short;
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).CustomFormat = "yyyy-MM-dd";
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Font = new Font("Segoe UI", 9F);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Location = new Point(38, 208);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Margin = new Padding(4, 5, 4, 5);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Name = "guna2TextBox6";
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).Size = new Size(320, 53);
+            ((Guna.UI2.WinForms.Guna2DateTimePicker)guna2TextBox6).TabIndex = 17;
             // 
             // guna2TextBox5
             // 
@@ -351,7 +342,7 @@
         private Guna.UI2.WinForms.Guna2TextBox guna2SearchBox;
         private Guna.UI2.WinForms.Guna2DataGridView guna2DataGridView1;
         private Guna.UI2.WinForms.Guna2TextBox guna2TextBox7;
-        private Guna.UI2.WinForms.Guna2TextBox guna2TextBox6;
+        private Guna.UI2.WinForms.Guna2DateTimePicker guna2TextBox6;
         private Guna.UI2.WinForms.Guna2TextBox guna2TextBox5;
         private Guna.UI2.WinForms.Guna2ComboBox guna2ComboBoxPatient;
         private Guna.UI2.WinForms.Guna2ComboBox guna2ComboBoxMedecin;

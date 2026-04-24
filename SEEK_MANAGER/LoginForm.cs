@@ -10,6 +10,7 @@ namespace SEEK_MANAGER
         private Guna.UI2.WinForms.Guna2TextBox txtUsername;
         private Guna.UI2.WinForms.Guna2TextBox txtEmail;
         private Guna.UI2.WinForms.Guna2TextBox txtPassword;
+        private ComboBox cbRole;
         private Guna.UI2.WinForms.Guna2Button btnLogin;
         private Guna.UI2.WinForms.Guna2Button btnRegister;
         private Guna.UI2.WinForms.Guna2Button btnToggle;
@@ -35,6 +36,9 @@ namespace SEEK_MANAGER
             txtUsername = new Guna.UI2.WinForms.Guna2TextBox { PlaceholderText = "Nom d'utilisateur", Location = new Point(40, 80), Size = new Size(420, 44) };
             txtEmail = new Guna.UI2.WinForms.Guna2TextBox { PlaceholderText = "Email (pour inscription)", Location = new Point(40, 130), Size = new Size(420, 44), Visible = false };
             txtPassword = new Guna.UI2.WinForms.Guna2TextBox { PlaceholderText = "Mot de passe", UseSystemPasswordChar = true, Location = new Point(40, 180), Size = new Size(420, 44) };
+            cbRole = new ComboBox { Location = new Point(40, 230), Size = new Size(200, 30), DropDownStyle = ComboBoxStyle.DropDownList, Visible = false };
+            cbRole.Items.AddRange(new[] { "Admin", "Utilisateur" });
+            cbRole.SelectedIndex = 1;
 
             btnLogin = new Guna.UI2.WinForms.Guna2Button { Text = "Se connecter", Location = new Point(40, 240), Size = new Size(200, 48), FillColor = Color.FromArgb(52,152,219) };
             btnRegister = new Guna.UI2.WinForms.Guna2Button { Text = "Créer un compte", Location = new Point(260, 240), Size = new Size(200, 48), FillColor = Color.FromArgb(46,204,113) };
@@ -47,6 +51,7 @@ namespace SEEK_MANAGER
             Controls.Add(lblTitle);
             Controls.Add(txtUsername);
             Controls.Add(txtEmail);
+            Controls.Add(cbRole);
             Controls.Add(txtPassword);
             Controls.Add(btnLogin);
             Controls.Add(btnRegister);
@@ -64,6 +69,7 @@ namespace SEEK_MANAGER
             {
                 // switch to register
                 txtEmail.Visible = true;
+                cbRole.Visible = true;
                 btnRegister.Visible = true;
                 btnLogin.Visible = false;
                 btnToggle.Text = "Se connecter";
@@ -72,6 +78,7 @@ namespace SEEK_MANAGER
             {
                 // switch to login
                 txtEmail.Visible = false;
+                cbRole.Visible = false;
                 btnRegister.Visible = false;
                 btnLogin.Visible = true;
                 btnToggle.Text = "S'inscrire";
@@ -85,6 +92,7 @@ namespace SEEK_MANAGER
                 var username = txtUsername.Text.Trim();
                 var email = txtEmail.Text.Trim();
                 var password = txtPassword.Text;
+                var role = cbRole.SelectedItem?.ToString() ?? "Utilisateur";
 
                 if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
                 {
@@ -98,12 +106,13 @@ namespace SEEK_MANAGER
                 using (var con = MySqlDbManager.Instance.GetConnection())
                 {
                     con.Open();
-                    var sql = "INSERT INTO users (username, password_hash, full_name, email) VALUES (@u,@p,@f,@e)";
+                    var sql = "INSERT INTO users (username, password_hash, full_name, email, role) VALUES (@u,@p,@f,@e,@r)";
                     var cmd = new MySql.Data.MySqlClient.MySqlCommand(sql, con);
                     cmd.Parameters.AddWithValue("@u", username);
                     cmd.Parameters.AddWithValue("@p", hash);
                     cmd.Parameters.AddWithValue("@f", username);
                     cmd.Parameters.AddWithValue("@e", email);
+                    cmd.Parameters.AddWithValue("@r", role);
                     cmd.ExecuteNonQuery();
                 }
 
@@ -133,7 +142,7 @@ namespace SEEK_MANAGER
                 using (var con = MySqlDbManager.Instance.GetConnection())
                 {
                     con.Open();
-                    var sql = "SELECT id_user, password_hash, full_name FROM users WHERE username=@u LIMIT 1";
+                var sql = "SELECT id_user, password_hash, full_name, role FROM users WHERE username=@u LIMIT 1";
                     var cmd = new MySql.Data.MySqlClient.MySqlCommand(sql, con);
                     cmd.Parameters.AddWithValue("@u", username);
                     var r = cmd.ExecuteReader();
@@ -147,6 +156,7 @@ namespace SEEK_MANAGER
                     var id = r.IsDBNull(0) ? 0 : r.GetInt32(0);
                     var hash = r.IsDBNull(1) ? string.Empty : r.GetString(1);
                     var fullName = r.FieldCount > 2 && !r.IsDBNull(2) ? r.GetString(2) : username;
+                    var role = r.FieldCount > 3 && !r.IsDBNull(3) ? r.GetString(3) : "Utilisateur";
                     r.Close();
 
                     if (BCrypt.Net.BCrypt.Verify(password, hash))
@@ -155,6 +165,7 @@ namespace SEEK_MANAGER
                         UserSession.UserId = id;
                         UserSession.Username = username;
                         UserSession.FullName = fullName;
+                        UserSession.Role = role;
 
                         MessageBox.Show("Connexion réussie.", "Succès", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         this.DialogResult = DialogResult.OK;

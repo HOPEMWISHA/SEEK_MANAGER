@@ -64,6 +64,39 @@ namespace SEEK_MANAGER
             btnDark.Click += ToggleDarkMode;
             header.Controls.Add(btnDark);
 
+            // Admin quick access button - opens login then admin dashboard if credentials are admin
+            var btnAdmin = new Button { Name = "btnAdmin", Text = "Admin", Dock = DockStyle.Right, Width = 120, BackColor = Color.FromArgb(41, 128, 185), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            btnAdmin.FlatAppearance.BorderSize = 0;
+            btnAdmin.Click += (s, e) =>
+            {
+                try
+                {
+                    using (var lf = new LoginForm())
+                    {
+                        var dr = lf.ShowDialog(this);
+                        if (dr != DialogResult.OK) return; // login cancelled or failed
+                    }
+
+                    if (!UserSession.IsAdmin)
+                    {
+                        MessageBox.Show("Accès administrateur refusé. Vous devez être connecté en tant qu'administrateur.", "Accès refusé", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    using (var adm = new Admin.AdminDashboard())
+                    {
+                        adm.ShowDialog(this);
+                    }
+                    // refresh username label after returning from admin
+                    try { var lbl = header.Controls["lblUser"] as Label; if (lbl != null) lbl.Text = UserSession.Username ?? string.Empty; } catch { }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Erreur ouverture admin: {ex.Message}", "Erreur", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            };
+            header.Controls.Add(btnAdmin);
+
             // show connected user and logout
             var lblUser = new Label
             {

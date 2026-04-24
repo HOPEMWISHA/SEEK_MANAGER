@@ -182,6 +182,17 @@ namespace SEEK_MANAGER
                 gfx.DrawString("FACTURE CLIENT", titleFont, XBrushes.Black, new XRect(xStart, y, page.Width - xStart - 40, 30), XStringFormats.TopLeft);
                 y += 34;
 
+                // show connected user on the invoice
+                try
+                {
+                    var userName = UserSession.FullName ?? UserSession.Username ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(userName))
+                    {
+                        gfx.DrawString($"Préparé par: {userName}", normalFont, XBrushes.Black, new XRect(40, 80, page.Width - 80, 20), XStringFormats.TopRight);
+                    }
+                }
+                catch { }
+
                 gfx.DrawString($"Client: {patientName}", normalFont, XBrushes.Black, new XRect(40, y, page.Width - 80, 20), XStringFormats.TopLeft);
                 y += 24;
 
@@ -229,6 +240,17 @@ namespace SEEK_MANAGER
                 gfx.DrawString($"Total: {sum:N2}", headerFont, XBrushes.Black, new XRect(left + colRefW + colDateW, y, colMethodW + colAmountW, 20), XStringFormats.TopLeft);
 
                 gfx.DrawString("Merci pour votre confiance.", normalFont, XBrushes.Black, new XRect(40, page.Height - 80, page.Width - 80, 20), XStringFormats.Center);
+
+                // include prepared by footer
+                try
+                {
+                    var userName = UserSession.FullName ?? UserSession.Username ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(userName))
+                    {
+                        gfx.DrawString($"Préparé par: {userName}", normalFont, XBrushes.Gray, new XRect(40, page.Height - 60, page.Width - 80, 16), XStringFormats.TopLeft);
+                    }
+                }
+                catch { }
 
                 doc.Save(fs);
                 fs.Flush();
