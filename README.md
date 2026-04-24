@@ -1,7 +1,5 @@
 voici le script de ma base de données
 
-ok
-
 CREATE DATABASE `HopitalDB`
   DEFAULT CHARACTER SET utf8mb4
   DEFAULT COLLATE utf8mb4_general_ci;
@@ -79,13 +77,13 @@ CREATE INDEX idx_users_username ON `users` (`username`);
 CREATE INDEX idx_users_email ON `users` (`email`);
 
 ALTER TABLE `patient`
-ADD COLUMN `age` INT;
+ADD COLUMN `age` INT; 
 
 DELIMITER $$
 CREATE TRIGGER `patient_before_insert`
 BEFORE INSERT ON `patient`
 FOR EACH ROW
-BEGIN
+BEGIN 
   SET NEW.age = TIMESTAMPDIFF(YEAR, NEW.`date_naissance`, CURDATE());
 END$$
 
