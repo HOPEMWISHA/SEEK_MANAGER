@@ -11,7 +11,6 @@ namespace SEEK_MANAGER
     public partial class HOSPITALISATION : Form
     {
         private readonly HospitalManager hm;
-
         public HOSPITALISATION()
         {
             InitializeComponent();
@@ -40,7 +39,7 @@ namespace SEEK_MANAGER
                         else
                         {
                             var safe = q.Replace("'", "''");
-                            // filter by patient name starting with the query (initial match)
+                            
                             dv.RowFilter = $"patient_nom LIKE '{safe}%'";
                         }
                     }
@@ -48,7 +47,7 @@ namespace SEEK_MANAGER
                 catch { }
             });
 
-            // Open EtatSortieForm which allows filtering by day/week/month/year and printing to PDF
+            
             guna2EtatSortie.Click += (s, e) =>
             {
                 try
@@ -62,7 +61,7 @@ namespace SEEK_MANAGER
                 }
             };
 
-            // Ensure ETAT_DE_SORTIE looks nice (Guna style)
+         
             try
             {
                 guna2EtatSortie.FillColor = System.Drawing.Color.FromArgb(46, 204, 113);
@@ -74,10 +73,10 @@ namespace SEEK_MANAGER
             }
             catch { }
 
-            // populate fields when selecting a row
+            
             guna2DataGridView1.CellClick += (s, e) => SyncFieldsWithSelectedRow();
             guna2DataGridView1.RowEnter += (s, e) => SyncFieldsWithSelectedRow();
-            // refresh button removed
+            
         }
 
         private void HOSPITALISATION_Load(object? sender, EventArgs e)
@@ -90,7 +89,7 @@ namespace SEEK_MANAGER
         {
             try
             {
-                // Patients — display as "nom prenom", value = id_patient
+                
                 var dtP = hm.GetPatientsTable();
                 var dtP2 = dtP.Clone();
                 if (!dtP2.Columns.Contains("full_name")) dtP2.Columns.Add("full_name", typeof(string));
