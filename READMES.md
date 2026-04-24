@@ -31,6 +31,8 @@ Suivre les montants
 Gérer les références de paiement
 Fonctionnement global
 
+
+
 L’utilisateur (réceptionniste ou médecin) :
 
 Ouvre l’application
